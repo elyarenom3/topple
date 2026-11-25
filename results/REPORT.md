@@ -18,11 +18,13 @@ report are kept in `results/archive_v1/`.
 3. Under perception, Monte Carlo propagation gives the best calibrated survival probability of
    the propagation methods (ECE 0.16, Brier 0.21). The point estimate is overconfident (0.44),
    which supports H2. The 0.05 target of H3 is not reached.
-4. Baselines: a logistic curve fitted to the point estimate margin matches the Monte Carlo Brier
-   score (0.20 compared with 0.21) when about 140 labelled outcomes are available, and a
-   classifier trained on 1,757 labelled placements reaches 0.17. With exact shapes, the tilt
-   margin predicts survival better than the support polygon check (Brier 0.105 compared with
-   0.139).
+4. The final method adds a learned recalibration step to the Monte Carlo probability, trained on
+   the outcomes of other experiments. Over 1,607 placements it lowers the Brier score from 0.236
+   to 0.175 and the ECE from 0.165 to 0.048, and raises the AUC from 0.72 to 0.82. It helps in
+   every experiment group except E4 (arm placement, delta 0.3), the group least like its training
+   data. Among the baselines, a logistic curve on the point estimate margin matches the
+   uncorrected Monte Carlo Brier score, and with exact shapes the tilt margin predicts survival
+   better than the support polygon check (Brier 0.105 compared with 0.139).
 5. Refining the friction cone from 4 to 32 sides increases the margin bias, so H1 is not
    supported in this setup.
 6. Shape uncertainty dominates the margin variance (E3); the underside of the stone now
@@ -242,6 +244,39 @@ the support polygon by 0.034 [0.018, 0.048].
 
 ![Baselines](baselines/baselines_reliability.png)
 
+### Final method: Monte Carlo with learned recalibration
+
+`python scripts/fig_recalibration.py` (tables in `results/recalibration/recalibration.md`, module
+`topple/eval/recalibration.py`)
+
+The Monte Carlo outputs (probability, margin mean, interval and spread) and the placement context
+(level, tower height, number of contacts, stone class and the experiment settings) go into a small
+gradient boosted tree classifier that returns the corrected survival probability. This model was
+chosen from the E2all baselines before the test below. Each experiment group is predicted by a
+model trained on the other groups only, with tower indices held out; intervals are 95% bootstrap
+intervals over towers.
+
+| Test group | Placements | Brier, stated | Brier, recalibrated | Brier difference | ECE, stated | ECE, recalibrated | AUC, stated | AUC, recalibrated |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| E2all | 143 | 0.209 | 0.168 | -0.041 [-0.081, -0.003] | 0.156 | 0.069 | 0.75 | 0.83 |
+| E4 | 233 | 0.141 | 0.156 | +0.014 [-0.033, +0.061] | 0.109 | 0.123 | 0.88 | 0.89 |
+| E5, off centre | 819 | 0.255 | 0.184 | -0.072 [-0.102, -0.043] | 0.180 | 0.074 | 0.67 | 0.80 |
+| E6 | 412 | 0.259 | 0.170 | -0.088 [-0.120, -0.059] | 0.208 | 0.063 | 0.68 | 0.82 |
+| all groups | 1,607 | 0.236 | 0.175 | -0.061 [-0.080, -0.041] | 0.165 | 0.048 | 0.72 | 0.82 |
+
+Over all groups the ECE falls to 0.048 (interval 0.037 to 0.076), at the 0.05 target of H3, and
+the AUC rises because the context separates placements the Monte Carlo probability ranks alike.
+E4 differs from the training groups in three ways (arm placement, delta = 0.3 and risk weights
+other than 1). There the stated probability is already well calibrated (Brier 0.141, ECE 0.11),
+and the recalibration leaves it unchanged within the interval; a logistic recalibration on the
+Monte Carlo outputs alone gives 0.124. The recalibrator therefore carries over to new noise
+levels, friction priors and stone classes, and needs outcomes from the arm setting before it is
+used there. Isotonic recalibration of the probability alone reaches a lower ECE (0.028) with a
+smaller gain in Brier score (0.207) and no gain in AUC. The calibrator trained on every group is
+saved in `results/recalibration/calibrator.pkl`.
+
+![Recalibration](recalibration/recalibration_reliability.png)
+
 ### E3: sources of margin variance (hypothesis H4)
 
 `python scripts/fig_sobol.py --profile study --towers 4 --n 256 --max-stones 3`
@@ -348,7 +383,7 @@ planning on irregular stones next to a tower is the step that most often fails.
 | --- | --- |
 | H1: with exact inputs the static tilt margin matches the critical tilt to the cone discretisation error | Not supported. Single stones: bias +3.6 degrees, Spearman 0.83. The bias grows with a finer cone, so the gap between feasibility and stability dominates. The rocking margin reduces the bias to -0.6 degrees. |
 | H2: a point estimate is overconfident | Supported (ECE 0.44, predictions at 0 or 1). |
-| H3: Monte Carlo is calibrated to ECE 0.05 and first order fails near zero margin | Monte Carlo is the best calibrated propagation method (ECE 0.16) and misses 0.05; first order is worse (0.22). |
+| H3: Monte Carlo is calibrated to ECE 0.05 and first order fails near zero margin | Monte Carlo alone is the best calibrated propagation method (ECE 0.16) and misses 0.05; first order is worse (0.22). With learned recalibration from other experiments the ECE over all groups is 0.048 (interval 0.037 to 0.076). |
 | H4: underside geometry dominates for flat stones, friction for blocky stones | Not supported as stated. Surface shape dominates for every class; the underside matters most for blocky stones; friction contributes little. |
 | H5: a lower confidence bound objective reduces collapses at a small height cost | Inconclusive at 24 towers per value (0 to 2 collapses per value). |
 
@@ -376,4 +411,6 @@ is written by `scripts/export_viewer.py` to `results/viewer/tower_viewer.html`.
 - PyBullet does not hold most of the settled towers, so the engine comparison rests on MuJoCo and
   Drake.
 - The Sobol indices average 5 to 7 placements per class.
+- The recalibrator learns from labelled outcomes of similar experiments; in the arm setting (E4)
+  it gives no improvement.
 - The OIDN denoiser is not installed; the renders use the bilateral denoiser.

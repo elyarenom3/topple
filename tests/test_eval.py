@@ -63,3 +63,24 @@ def test_report_row_and_table(tmp_path):
     assert (tmp_path / "table.md").exists()
     m, lo, hi = bootstrap_ci(np.array([r["m_hat"] for r in recs]), np.array([r["tower"] for r in recs]), n_boot=50)
     assert lo <= m <= hi
+
+
+def test_recalibrator_corrects_a_miscalibrated_probability(tmp_path):
+    from topple.eval.metrics import expected_calibration_error
+    from topple.eval.recalibration import Recalibrator, leave_tower_out
+
+    rng = np.random.default_rng(0)
+    recs = []
+    for i in range(1200):
+        q = rng.uniform()  # true survival probability
+        m = 10.0 * q
+        recs.append({"p_hat": q ** 3, "m_hat": m, "m_lo": m - 2.0, "m_hi": m + 2.0, "samples": [m - 1.0, m + 1.0], "placement": 0, "height": 0.05,
+                     "meta": {"n_contacts": 4, "stone_class": "flat_river"}, "y": float(rng.uniform() < q), "tower": i % 12, "settings": {}})
+    y = np.array([r["y"] for r in recs])
+    p_raw = np.array([r["p_hat"] for r in recs])
+    p_cal = leave_tower_out(recs, recs, "boosted", context=True)
+    assert np.mean((p_cal - y) ** 2) < np.mean((p_raw - y) ** 2) - 0.01
+    assert expected_calibration_error(p_cal, y, 10) < 0.5 * expected_calibration_error(p_raw, y, 10)
+    rc = Recalibrator("logistic", context=False).fit(recs)
+    rc.save(tmp_path / "cal.pkl")
+    assert np.allclose(Recalibrator.load(tmp_path / "cal.pkl").predict(recs[:20]), rc.predict(recs[:20]))

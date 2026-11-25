@@ -44,6 +44,8 @@ from topple.pipeline import Condition, Experiment, records_to_rows, save_records
 CONDITIONS = {
     "E1all": dict(oracle=True, propagation="none", margin="tilt", extra={"eval_margins": ["push", "fc", "support", "rocking"], "eval_cones": [4, 16, 32]}),
     "E2all": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none", "unscented", "first_order"], "eval_simulation": True, "eval_margins": ["rocking"]}),
+    # E2 with a looser chance constraint (run with --delta 0.3) so that towers grow under perception
+    "E2grow": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none"], "eval_margins": ["rocking"]}),
     "E2ut": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["unscented"]}),
     "E1": dict(oracle=True, propagation="none", margin="tilt"),
     "E1_push": dict(oracle=True, propagation="none", margin="push"),

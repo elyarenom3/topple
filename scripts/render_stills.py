@@ -76,6 +76,21 @@ def H1(args):
     finish("H1_tower_at_dusk", sc, cam, args)
 
 
+def _within_focus_range(cam, target, margin: float = 1.05) -> None:
+    """Move the camera back along its line of sight when ``target`` is closer than the traced
+    double Gauss lens (at the camera's focal length) can focus."""
+    from topple.render.lens import DOUBLE_GAUSS_50, LensSystem
+
+    lens = LensSystem(DOUBLE_GAUSS_50, cam.focal_mm, cam.f_number)
+    f = lens.effective_focal_length()
+    s = np.array([lens.object_distance(x) for x in np.linspace(0.2 * f, 3.0 * f, 300)])
+    s = s[np.isfinite(s) & (s > 0)]
+    d_min = margin * float(s.min())
+    d = float(np.linalg.norm(cam.position - target))
+    if d < d_min:
+        cam.position = target + (cam.position - target) * (d_min / d)
+
+
 def H2(args):
     """Contact: one interface under grazing light, with the same frame plus O1 forces."""
     j = min(1, len(SHOW.tower_ids) - 1)
@@ -92,6 +107,7 @@ def H2(args):
         cam = SHOW.camera("H2", w, h)
         cam.look_at = c
         cam.position = c + np.array([0.3, -0.22, 0.035])
+        _within_focus_range(cam, c)
         cam.focus_distance = float(np.linalg.norm(cam.position - c))
         cam.lens = "dgauss50"  # traced double Gauss (Kolb et al. 1995): real vignetting and bokeh
         cam.__post_init__()

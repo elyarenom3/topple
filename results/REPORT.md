@@ -3,29 +3,39 @@
 This report covers the implementation and the experiments of the technical specification
 "Calibrated Stone Balancing with a Simulated Robot Arm". Design decisions and departures from
 the specification are listed in `docs/DESIGN.md`. Every number below comes from a file under
-`results/`, produced by the command named next to it.
+`results/`, produced by the command named next to it. The first round of experiments and its
+report are kept in `results/archive_v1/`.
 
 ## Summary
 
-1. All eight modules are implemented and tested: 128 tests pass and one is skipped (PyBullet
-   has no wheel for Python 3.13 on this machine).
-2. With exact inputs, the static tilt margin predicts the dynamic critical tilt of a single stone
-   on the ground well (Spearman 0.83, bias +2.7 degrees). For stacked stones it predicts
-   systematically high (bias +4.3 degrees, Spearman 0.43): stones shift onto neighbouring hull
-   vertices or roll on the stone below, and the 2 degree failure rule counts this as failure
-   while the contact force program is still feasible.
+1. All eight modules are implemented and tested (137 test functions; in the fast suite 148
+   cases pass and 2 are skipped, the PyBullet cases, which run in a separate Python 3.11
+   environment).
+2. With exact inputs, the static tilt margin ranks the dynamic critical tilt well for single
+   stones (Spearman 0.83) and predicts high by about 3 degrees. The new rocking aware margin
+   (Margin 4) removes most of that bias: bias -0.6 degrees and RMSE 3.5 degrees, compared with
+   +3.2 and 6.1 degrees for the tilt margin over 193 placements.
 3. Under perception, Monte Carlo propagation gives the best calibrated survival probability of
-   the methods compared (expected calibration error 0.17 with 10 bins, 0.15 with 5 bins). The
-   point estimate is overconfident (0.42), which supports hypothesis H2. The 0.05 target of H3
-   is not reached.
-4. Refining the friction cone from 4 to 32 sides increases the margin error. The cone
-   discretisation is a smaller effect than the gap between static feasibility and dynamic
-   stability, so H1 is not supported in this setup.
-5. Shape uncertainty dominates the variance of the margin for every stone class (E3). Quadrupled
-   depth noise lowers the towers from 9.4 to 3.2 cm and raises the Brier score from 0.17 to 0.29
-   (E5). The risk weight has no measurable effect at 10 towers per value (E4).
-6. The path tracer matches Mitsuba 3 on a shared scene (FLIP 0.003), and all twelve stills and
-   nine videos are rendered from the recorded simulation at reduced resolution.
+   the propagation methods (ECE 0.16, Brier 0.21). The point estimate is overconfident (0.44),
+   which supports H2. The 0.05 target of H3 is not reached.
+4. Baselines: a logistic curve fitted to the point estimate margin matches the Monte Carlo Brier
+   score (0.20 compared with 0.21) when about 140 labelled outcomes are available, and a
+   classifier trained on 1,757 labelled placements reaches 0.17. With exact shapes, the tilt
+   margin predicts survival better than the support polygon check (Brier 0.105 compared with
+   0.139).
+5. Refining the friction cone from 4 to 32 sides increases the margin bias, so H1 is not
+   supported in this setup.
+6. Shape uncertainty dominates the margin variance (E3); the underside of the stone now
+   contributes a total index of 0.34 to 0.65. Quadrupled depth noise lowers the towers from 6.8
+   to 2.4 cm and raises the Brier score from 0.21 to 0.29 (E5). The risk weight has no
+   measurable effect at 24 towers per value (E4).
+7. The arm placed 95 of 142 stones in E4 itself (67%) and handed the rest to the oracle
+   lowering, mostly when no grasp was found. In the study scale demonstration, the three
+   placements the arm completed landed within 3 mm of the target.
+8. MuJoCo and Drake agree with the developer's engine on the critical tilt of twelve settled
+   three stone towers (mean difference 1.4 degrees, Spearman 0.75 and 0.90).
+9. The path tracer matches Mitsuba 3 on a shared scene (FLIP 0.003). The stills and videos are
+   being rendered at 1920 and 960 pixels wide.
 
 ## Implementation
 
@@ -37,12 +47,12 @@ the specification are listed in `docs/DESIGN.md`. Every number below comes from 
 | static analyser and margin model | `topple/statics` | `tests/test_statics.py` |
 | depth sensor and estimator | `topple/perception` | `tests/test_perception.py` |
 | planner and controller | `topple/planning` | `tests/test_planning.py` |
-| path tracer | `topple/render` | `tests/test_render.py` |
+| path tracer and sound | `topple/render` | `tests/test_render.py` |
 | harness, evaluator, validation | `topple/harness`, `topple/eval`, `topple/validation` | `tests/test_harness.py`, `tests/test_eval.py`, `tests/test_validation.py`, `tests/test_guard.py` |
 | end to end | `topple/pipeline.py` | `tests/test_integration.py` |
 
-The package has about 18,000 lines of Python with numba kernels, 3,000 lines of scripts and
-1,900 lines of tests (118 test functions, 129 test cases with parameters).
+The package has about 20,000 lines of Python with numba kernels, 3,500 lines of scripts and
+2,300 lines of tests.
 
 ## Validation
 
@@ -53,81 +63,104 @@ conserves horizontal momentum. Contact impulses satisfy the polygonal cone to 1e
 complementarity residual of a resting stack is below 1e-6. On an inclined plane slip starts at
 tan alpha = mu (measured about 1 degree late at the test sweep rate because failure is declared at
 5 mm), the sliding acceleration matches g (sin alpha - mu cos alpha), and the tipping angle of a
-block follows min(atan mu, atan b/h). Ten stacked cubes drift 0.04 mm in 10 s (limit 0.1 mm).
+block follows min(atan mu, atan b/h). Ten stacked cubes drift 0.05 mm in 10 s (limit 0.1 mm).
 Sequential impacts in Newton's cradle pass the velocity to the last cube, simultaneous impacts
 share it. Mass properties of cube, tetrahedron and sphere meshes match the closed forms and
 converge under refinement.
 
+The contact query was revised for this round. Two convex hulls that touch exactly made the
+penetration solver return an arbitrary normal, which let curved stones gain energy at rest; the
+query now resolves touching hulls with a shifted distance query, and the contact manifold keeps
+the load bearing points first.
+
 ![F3](figures/F3_solver_validation.png)
 
 **Cross engine (Section 12.2, `scripts/fig_engine_comparison.py`, figure F4).** On a single block
-MuJoCo and Drake reproduce the analytic tipping angle within 3 degrees. On eight hand stacked
-three stone towers settled in the developer's engine, MuJoCo agrees on the critical tilt within
-about 1.5 degrees on five towers and differs by 4 to 5 degrees on two; settled poses after 1 s
-agree to below 1 mm on six towers. Drake fails at or near zero tilt on six of the eight towers.
-Its compliant point contact with regularised friction lets stacked hulls creep under static
-load; the adapter passes the single block test, so the difference lies in how the engines treat
-stacked convex contacts at rest.
+MuJoCo and Drake reproduce the analytic tipping angle within 3 degrees. Twelve three stone towers
+were settled in the developer's engine and then settled, tilted and perturbed in each engine:
+
+| Engine | Critical tilt, mean difference (deg) | Spearman | Same fixed test outcome | Settled pose difference, median (mm) |
+| --- | --- | --- | --- | --- |
+| MuJoCo 4.0 | 1.4 | 0.75 | 11 of 12 | 0.3 |
+| Drake (SAP, hydroelastic between stones) | 1.4 | 0.90 | 9 of 12 | 0.2 |
+| PyBullet | 3.4 | 0.32 | 8 of 12 | 40 |
+
+Two towers that hold at 0.7 and 2.0 degrees in the developer's engine fall at zero tilt in both
+MuJoCo and Drake, so they lie at the edge of stability. PyBullet does not hold 9 of the 12 towers
+at zero tilt with its convex hull contact, so its row measures the engine setup more than the
+towers.
 
 ![F4](figures/F4_engine_comparison.png)
 
 **Static analyser (Section 12.3, `tests/test_statics.py`).** Block on a plane in the sliding and
 tipping regimes (within 0.15 degrees with a 64 sided cone), block on a wedge, three block arch
 (feasible with friction, infeasible without), invariance to mass scaling and to rotation about the
-vertical, equilibrium of the minimum norm forces, dual based gradients against finite differences.
+vertical, equilibrium of the minimum norm forces, dual based gradients against finite
+differences. The rocking margin of a block matches the analytic tipping angle, and on a curved
+support it lies below the tilt margin.
 
 **Perception (Section 12.4, figures F5 and F6).** With exact depth, the fused surface is within
 1.4 mm (median) of the true surface at 3 mm voxels; the error grows to 3.2 mm at four times the
 nominal noise. With in hand views of the underside, the centre of mass error falls from 2.7 mm
 (2 views) to 1.2 to 1.4 mm (8 to 12 views); without them it stays between 2 and 6.5 mm. Simulation
-based calibration of the centre of mass posterior is checked in `tests/test_perception.py`.
+based calibration of the centre of mass posterior is checked in `tests/test_perception.py`. The
+screened Poisson completion recovers the volume of a sphere within 1%.
 
 ![F5](figures/F5_depth_noise_fusion.png)
 
 **Renderer (Sections 10.9 and 12.5, figure R1).** The furnace test, sphere light irradiance, BVH
 against brute force intersection and the motion blur of a rotating disc pass
-(`tests/test_render.py`). On a shared scene of diffuse spheres and a box under a rectangular area
-light, the developer's path tracer and Mitsuba 3 differ by a mean FLIP error of 0.003 (target
-below 0.05) and by 0.4% in mean radiance (`scripts/fig_mitsuba_comparison.py`).
+(`tests/test_render.py`). Added in this round and tested there: the Hošek–Wilkie sky against the
+reference formula, the spectral mode against RGB in a furnace, an invisible dielectric sphere in
+a furnace, manifold next event estimation against the analytic irradiance under flat water, the
+double Gauss lens (paraxial focal length 50.4 mm, exposure against a thin lens), and modal impact
+sound. On a shared scene of diffuse spheres and a box under a rectangular area light, the
+developer's path tracer and Mitsuba 3 differ by a mean FLIP error of 0.003 (target below 0.05)
+and by 0.4% in mean radiance (`scripts/fig_mitsuba_comparison.py`).
 
 ![R1](figures/R1_mitsuba_comparison.png)
 
 ## Experiments
 
-All experiments use `configs/study.yaml`: 24 towers per condition for E1 and E2, piles of 8
-stones, 320 x 240 depth images, 64 Monte Carlo samples, tilt margins over 24 azimuths and dynamic
-tilt tests over 6 azimuths. Every placement is tested by the dynamic harness on a clone holding
-the ground and the tower. Probe placements (two per step, spread over predicted survival
-probability, tested on clones and never kept) supply calibration data below the 0.95 chance
-constraint; tower metrics use the building placements only. Placement uses the oracle lowering.
+All experiments use `configs/study.yaml`: 24 towers per condition, piles of 8 stones, 320 x 240
+depth images, 64 Monte Carlo samples, tilt margins over 24 azimuths and dynamic tilt tests over 6
+azimuths. Every placement is tested by the dynamic harness on a clone holding the ground and the
+tower. Probe placements (two per step, spread over predicted survival probability, tested on
+clones and never kept) supply calibration data below the 0.95 chance constraint; tower metrics
+use the building placements only. E1, E2, E5 and E6 use the oracle lowering; E4 uses the arm.
+The whole queue is `scripts/run_all_v2.sh` (log `results/logs/run_all_v2.log`).
 
 ### E1 and E7: exact inputs (hypothesis H1)
 
-`python scripts/run_experiment.py --condition E1all --profile study --workers 5 --tests tilt,fixed,push`
+`python scripts/run_experiment.py --condition E1all --profile study --towers 24`
 
-24 towers, 71 building placements and 170 probes. Towers reached 1 to 5 stones (mostly 3), with
-a mean height of 12.4 cm and 2.75 stones placed before the first failure; 21% of towers collapsed
-during a placement.
+24 towers, 73 building placements and 173 probes. Ten towers reached 4 stones, six 3, seven 2 and
+one 1, with a mean height of 13.9 cm and 2.8 stones placed before the first failure; 6 towers
+(25%) collapsed during a placement.
 
-| Subset | n | Bias (deg) | RMSE (deg) | Spearman |
-| --- | --- | --- | --- | --- |
-| single stone on the ground | 72 | +2.7 | 5.0 | 0.83 |
-| stacked stones | 112 | +4.3 | 8.0 | 0.43 |
-| all | 184 | +3.6 | 7.0 | 0.62 |
+| Margin | Subset | n | Bias (deg) | RMSE (deg) | Spearman |
+| --- | --- | --- | --- | --- | --- |
+| tilt | single stone on the ground | 71 | +3.6 | 6.2 | 0.83 |
+| tilt | stacked stones | 122 | +3.0 | 6.0 | 0.58 |
+| tilt | all | 193 | +3.2 | 6.1 | 0.70 |
+| rocking (Margin 4) | single stone on the ground | 71 | -0.6 | 2.5 | 0.95 |
+| rocking (Margin 4) | stacked stones | 122 | -0.6 | 4.0 | 0.46 |
+| rocking (Margin 4) | all | 193 | -0.6 | 3.5 | 0.69 |
 
 ![F7 exact](figures/F7_margin_scatter_E1all.png)
+![F7 exact rocking](figures/F7_margin_scatter_E1all_rocking.png)
 
-The static margin is the critical angle of the current contact configuration. The dynamic test
-declares failure at 5 mm or 2 degrees. Traces of individual towers show the upper stone pivoting
-by 1 to 4 degrees onto nearby hull vertices well before the static program becomes infeasible,
-and a rounded lower stone rolling more as the tower's centre of mass rises. Both count as failure.
-This is the case the specification anticipates in Section 7.1: feasibility is necessary and in
-general insufficient for stability.
+The tilt margin is the critical angle of the current contact configuration. The dynamic test
+declares failure at 5 mm or 2 degrees, and stones pivot onto nearby hull vertices or roll on a
+rounded support before the static program becomes infeasible. The rocking margin follows this:
+it settles the hulls quasi statically under rotated gravity and applies the same 5 mm and 2
+degree rule. Its survival probability (Brier 0.195, compared with 0.329 for the tilt margin)
+is the better of the two on these placements.
 
-**Margin definitions.** The push margin predicts the push test with a bias of +0.02 and an RMSE
-of 0.15 (in units of the top stone's weight, Spearman 0.59). The support quality radius ranks the
-critical tilt with Spearman 0.43 and the push test with 0.42; the support polygon margin ranks the
-critical tilt with 0.56.
+**Margin definitions.** Spearman correlation with the measured critical tilt over the 193
+placements: tilt 0.70, rocking 0.69, support polygon 0.65, force closure 0.39. The push test was
+not run in this round; in the first round the push margin predicted it with a bias of +0.02 and an
+RMSE of 0.15 top stone weights (`results/archive_v1`).
 
 ![F12b](figures/F12b_margin_definitions.png)
 
@@ -135,210 +168,212 @@ critical tilt with 0.56.
 
 | N | Bias (deg) | RMSE (deg) |
 | --- | --- | --- |
-| 4 | +2.0 | 6.3 |
-| 8 | +3.6 | 7.0 |
-| 16 | +3.9 | 7.2 |
-| 32 | +3.9 | 7.2 |
+| 4 | +1.7 | 5.6 |
+| 8 | +3.2 | 6.1 |
+| 16 | +3.4 | 6.2 |
+| 32 | +3.5 | 6.2 |
 
 A coarser cone under approximates friction and lowers the static margin, which partly offsets the
 overestimate. H1 expected an error of order 10% falling with N; here the error is dominated by
-the feasibility and stability gap.
+the gap between static feasibility and dynamic stability.
 
 ![F12a](figures/F12a_cone_sides.png)
 
 ### E2 and E8: perception and propagation (hypotheses H2, H3, question Q5)
 
-`python scripts/run_experiment.py --condition E2all --profile study --workers 5`
+`python scripts/run_experiment.py --condition E2all --profile study --towers 24`
 
-24 towers, 24 building placements and 120 probes on the same perceived placements. Every tower
-stopped after its first stone: no second stone met p_hat >= 0.95 under the perception posterior.
-
-| Method | Brier | ECE (10 bins) | 95% coverage | RMSE (deg) |
-| --- | --- | --- | --- | --- |
-| Monte Carlo (64 samples) | 0.222 | 0.173 | 0.88 | 6.3 |
-| first order | 0.253 | 0.228 | 0.90 | 7.5 |
-| point estimate | 0.417 | 0.417 | 0.12 | 7.5 |
-| simulation score (E8) | 0.382 | 0.382 | | 6.8 |
-
-The unscented transform was first run with the scaling alpha = 1e-3, which gives the central
-sigma point a weight near -1 / alpha^2 and fails on a margin that is piecewise smooth and often
-exactly zero. It now uses alpha = 1, kappa = 0 (all weights positive). Its predictions were
-recomputed by rerunning towers 0 to 11 (`scripts/run_ut_rerun.sh`): all 75 rerun placements
-matched the original placements exactly, which also confirms that the random streams reproduce
-a tower. On these 75 placements:
+24 towers, 25 building placements and 118 probes, with every method evaluated on the same
+perceived placements. 23 towers stopped after their first stone: no second stone met
+p_hat >= 0.95 under the perception posterior.
 
 | Method | Brier | ECE (10 bins) | 95% coverage | RMSE (deg) |
 | --- | --- | --- | --- | --- |
-| Monte Carlo | 0.196 | 0.150 | 0.91 | 4.2 |
-| unscented (2n + 1 sigma points) | 0.252 | 0.279 | 0.93 | 4.8 |
+| Monte Carlo (64 samples) | 0.209 | 0.156 | 0.85 | 6.1 |
+| Monte Carlo, rocking margin | 0.222 | 0.182 | 0.64 | 7.8 |
+| unscented (2n + 1 sigma points) | 0.245 | 0.225 | 0.90 | 6.4 |
+| first order | 0.257 | 0.219 | 0.81 | 7.8 |
+| point estimate | 0.441 | 0.441 | 0.02 | 7.8 |
+| simulation score (E8) | 0.441 | 0.441 | | 6.8 |
 
 For question Q5, Monte Carlo is the better calibrated method at a similar cost (64 samples
-against 2n + 1 = 45 to 89 sigma points for one or two stones, n = 22 per stone), and the first
-order method lies between them.
+compared with 2n + 1 = 45 to 89 sigma points for one or two stones, n = 22 per stone). The
+unscented transform uses alpha = 1 and kappa = 0, which keeps every weight positive.
 
-The Monte Carlo Brier score decomposes into reliability 0.029, resolution 0.044 and uncertainty
-0.239 (5 bins). Coverage at the 50, 80 and 95% levels is 0.44, 0.77 and 0.88, so the intervals
-are slightly narrow; a Kolmogorov Smirnov test does not reject uniformity of the probability
-integral transform (p = 0.11). The building placements are overconfident (mean p_hat 0.90, observed
-survival 0.79) while the probes match in aggregate (0.33 and 0.32).
+The Monte Carlo Brier score decomposes into reliability 0.029, resolution 0.064 and uncertainty
+0.249 (5 bins). Coverage at the 50, 80 and 95% levels is 0.43, 0.70 and 0.85, so the intervals
+are narrow, and a Kolmogorov Smirnov test rejects uniformity of the probability integral
+transform (p = 6e-9). The mean margin is 2.3 degrees below the measured tilt: placements stated
+near zero survive about a quarter of the time. In aggregate the building placements match (mean
+p_hat 0.90, observed survival 0.92), and so do the probes (0.35 and 0.36).
 
 ![F8](figures/F8_reliability.png)
 ![F7 perception](figures/F7_margin_scatter_E2all.png)
 ![F8b](figures/F8b_pit.png)
 
-H2 is supported: the point estimate places its predictions at 0 or 1 and its reliability curve
-lies below the diagonal at high predicted probability. H3 is not met at this scale: the Monte
-Carlo ECE of 0.15 to 0.17 is above the 0.05 target, and the gap comes from the stacked placements,
-where the static model is biased as in E1.
+H2 is supported: the point estimate places its predictions at 0 or 1, with a reliability of 0.20
+compared with 0.03 for Monte Carlo. H3 is not met at this scale: the Monte Carlo ECE of 0.16 is
+above the 0.05 target.
+
+### Baselines for the survival probability
+
+`python scripts/fig_baselines.py` (tables in `results/baselines/baselines.md`)
+
+Each baseline is scored on the E2all placements with leave one tower out validation: the model
+for tower t never sees tower t of any experiment, since experiments share stones by tower index.
+Intervals are 95% bootstrap intervals over towers, and differences are paired.
+
+| Method | Brier | ECE | AUC | Brier difference from Monte Carlo |
+| --- | --- | --- | --- | --- |
+| Monte Carlo (main method) | 0.209 | 0.156 | 0.75 | |
+| point estimate | 0.441 | 0.441 | 0.58 | +0.231 [+0.147, +0.311] |
+| logistic curve on the point estimate margin | 0.204 | 0.078 | 0.72 | -0.005 [-0.035, +0.022] |
+| logistic curve on the Monte Carlo mean margin | 0.190 | 0.084 | 0.73 | -0.019 [-0.038, +0.000] |
+| Monte Carlo, isotonic recalibration | 0.198 | 0.103 | 0.70 | -0.011 [-0.030, +0.008] |
+| logistic regression, point estimate features (E2all only) | 0.186 | 0.094 | 0.79 | -0.023 [-0.057, +0.009] |
+| boosted trees, all experiments (1,757 placements) | 0.170 | 0.074 | 0.83 | -0.039 [-0.077, -0.003] |
+
+The Monte Carlo probability needs no outcome data. A curve fitted to a single margin reaches the
+same Brier score once about 140 labelled outcomes from the same simulator are available, and a
+classifier trained on the Monte Carlo summaries of 1,757 labelled placements does better. With
+exact shapes (E1all), curve fits rank the margins as tilt and rocking (Brier 0.105 and 0.106),
+push (0.116), support polygon (0.139) and force closure (0.185); the tilt margin is better than
+the support polygon by 0.034 [0.018, 0.048].
+
+![Baselines](baselines/baselines_reliability.png)
 
 ### E3: sources of margin variance (hypothesis H4)
 
-`python scripts/fig_sobol.py --profile study --towers 2 --n 64 --max-stones 3`
+`python scripts/fig_sobol.py --profile study --towers 4 --n 256 --max-stones 3`
 
 The reduced posterior vector of every stone in the tower is split into five groups and a Saltelli
-design (64 rows, 7 x 64 margin evaluations per placement) gives first order and total Sobol
-indices, averaged over 3 to 5 placements per class.
+design (256 rows) gives first order and total Sobol indices, averaged over 5 to 7 placements per
+class. A shape mode counts as underside when most of its energy lies on vertices whose normal
+points down at the placed orientation.
 
-| Class | Surface shape S / ST | Centre of mass ST | Friction ST | Pose ST |
-| --- | --- | --- | --- | --- |
-| flat river | 0.66 / 0.83 | 0.27 | 0.01 | 0.32 |
-| blocky quarry | 0.52 / 1.20 | 0.14 | 0.01 | 0.38 |
-| rounded cobble | 0.72 / 1.02 | 0.08 | 0.00 | 0.22 |
+| Class | Surface shape S / ST | Underside shape S / ST | Centre of mass ST | Friction ST | Pose ST |
+| --- | --- | --- | --- | --- | --- |
+| flat river | 0.46 / 0.87 | 0.12 / 0.34 | 0.20 | 0.05 | 0.29 |
+| blocky quarry | 0.24 / 0.70 | 0.24 / 0.65 | 0.06 | 0.02 | 0.30 |
+| rounded cobble | 0.37 / 0.84 | 0.12 / 0.43 | 0.16 | 0.00 | 0.19 |
 
-Shape uncertainty dominates the tilt margin variance for every class, followed by pose and the
-centre of mass; the friction coefficient contributes almost nothing because the measured
-failures are tipping and rocking. The underside group is empty: the in hand
-views observe the underside, so every shape mode has most of its energy on observed surface.
-H4 is therefore not supported as stated. With 64 design rows and few placements the estimates
-carry visible noise (a total index above 1, small negative first order indices clipped to 0).
+Shape uncertainty dominates the tilt margin variance for every class. The underside carries as
+much first order variance as the rest of the surface for blocky stones and about a quarter of it
+for flat and rounded stones. Friction contributes little because the measured failures are
+tipping and rocking. Total indices well above the first order indices show strong interactions
+between the groups.
 
 ![F9](figures/F9_sobol.png)
 
-### E4: risk weight (hypothesis H5, question Q4)
+### E4: risk weight with arm placement (hypothesis H5, question Q4)
 
-`python scripts/run_kappa_sweep.py` through `scripts/run_followups.sh` (10 towers per value,
-delta = 0.3 so that towers can grow under perception, fixed perturbation test only).
+`python scripts/run_experiment.py --condition E4 --profile study --towers 24 --kappa K --delta 0.3 --probes 0 --tests fixed --placement arm`
 
-| kappa | Mean height (cm) | Stones before failure | Collapse rate | Placements surviving 3 degrees |
-| --- | --- | --- | --- | --- |
-| 0 | 10.5 | 1.7 | 0.0 | 0.41 |
-| 0.5 | 11.7 | 1.9 | 0.1 | 0.41 |
-| 1 | 11.3 | 1.8 | 0.0 | 0.36 |
-| 2 | 10.6 | 1.6 | 0.1 | 0.42 |
+24 towers per value, delta = 0.3 so that towers can grow under perception, fixed perturbation
+test only. The arm grasps, carries and releases each stone; when grasp planning or the pick
+fails, the placement falls back to the oracle lowering.
 
-The differences are within the sampling noise of 10 towers (one collapse moves the rate by 0.1),
-so H5 is inconclusive at this scale. With delta = 0.3 a little under 60% of the placements fail
-the 3 degree hold although no tower collapsed while being built, which again reflects the
-optimistic static margin for stacked stones. A decision takes 200 to 290 s at study scale (8 pile
-stones, 10 candidates each, dynamic settling and Monte Carlo screening).
+| kappa | Mean height (cm) | Stones before failure | Collapse rate | Building placements surviving 3 degrees | Placed by the arm |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 8.8 | 1.50 | 0.08 | 0.66 | 23 of 38 |
+| 0.5 | 8.7 | 1.42 | 0.00 | 0.71 | 22 of 34 |
+| 1 | 8.6 | 1.33 | 0.08 | 0.65 | 24 of 34 |
+| 2 | 9.6 | 1.46 | 0.04 | 0.58 | 26 of 36 |
+
+The differences lie within the sampling noise of 24 towers (one collapse moves the rate by 0.04),
+so H5 is inconclusive at this scale. Of the 47 fallbacks, 24 came from grasp planning (no
+collision free grasp with a valid inverse kinematics solution) and 23 from the stone being
+disturbed during the pick descent. A decision takes 48 to 56 s.
 
 ![F10](figures/F10_kappa.png)
 
 ### E5: depth noise and friction prior width
 
-Cross design through the base point (noise scale 1, friction log sigma 0.25), 6 towers per point,
+Cross design through the base point (noise scale 1, friction log sigma 0.25), 24 towers per point,
 fixed perturbation test only (so only Brier and ECE are reported).
 
 | Noise scale | Brier | ECE | Mean height (cm) |
 | --- | --- | --- | --- |
-| 0.5 | 0.205 | 0.235 | 8.7 |
-| 1 | 0.167 | 0.129 | 9.4 |
-| 2 | 0.166 | 0.177 | 6.0 |
-| 4 | 0.289 | 0.269 | 3.2 |
+| 0.5 | 0.256 | 0.209 | 6.3 |
+| 1 | 0.210 | 0.149 | 6.8 |
+| 2 | 0.274 | 0.208 | 6.2 |
+| 4 | 0.286 | 0.235 | 2.4 |
 
 | Friction log sigma | Brier | ECE |
 | --- | --- | --- |
-| 0.05 | 0.136 | 0.154 |
-| 0.1 | 0.172 | 0.232 |
-| 0.25 | 0.167 | 0.129 |
-| 0.5 | 0.207 | 0.190 |
+| 0.05 | 0.243 | 0.167 |
+| 0.1 | 0.249 | 0.206 |
+| 0.25 | 0.210 | 0.149 |
+| 0.5 | 0.235 | 0.187 |
 
-Four times the nominal depth noise degrades both scores and lowers the towers; the other
-settings lie within the sampling noise of about 40 placements per point.
+Four times the nominal depth noise degrades both scores and lowers the towers to about a third
+of their height. The base point gives the best scores on both axes; the other settings lie close
+to each other at about 140 placements per point.
 
 ![F11](figures/F11_sensitivity.png)
 
 ### E6: stone class
 
-One run per class (6 towers each, tilt and fixed tests), and the class of the placed stone in E2.
+One run per class (24 towers each, tilt and fixed tests).
 
-| Class (own pile) | Brier | ECE | RMSE tilt (deg) | 95% coverage |
-| --- | --- | --- | --- | --- |
-| flat river | 0.206 | 0.213 | 6.2 | 0.94 |
-| blocky quarry | 0.370 | 0.377 | 11.0 | 0.63 |
-| rounded cobble | 0.149 | 0.261 | 2.1 | 0.97 |
+| Class (own pile) | Brier | ECE | Margin bias (deg) | RMSE tilt (deg) | 95% coverage |
+| --- | --- | --- | --- | --- | --- |
+| flat river | 0.218 | 0.138 | +0.1 | 6.2 | 0.92 |
+| blocky quarry | 0.354 | 0.362 | -6.8 | 10.2 | 0.63 |
+| rounded cobble | 0.205 | 0.251 | +0.7 | 2.6 | 0.91 |
 
-Blocky stones are the hardest to predict: their flat faces give large static margins that the
-dynamic tests do not reach, the E1 overestimate again, and their posterior intervals are too
-narrow. Rounded cobbles have small margins that are predicted closely.
+Blocky stones are the hardest to predict under perception: the Monte Carlo margin lies 6.8
+degrees below the measured tilt and the intervals are narrow. A likely cause, consistent with
+the large underside share in E3, is that shape samples round off flat faces and so lower the
+margin. Rounded cobbles have small margins that are predicted closely.
 
 ### Arm placement demonstration (milestones M8 and M9)
 
-`python scripts/arm_demo.py --profile quick --towers 3 --max-stones 3` (results in
+`python scripts/arm_demo.py --profile study --towers 3 --max-stones 3` (results in
 `results/arm_demo.json`)
 
 The full chain runs: antipodal grasp selection on the stone, damped least squares IK to the
 pre grasp, pick and approach poses, RRT-Connect around the inflated tower, finger closure, carry,
-Cartesian impedance descent at 1 cm/s, contact detection from the wrist force, release and
-retract. In the last demonstration the arm completed 4 of 6 placements; one fell back because
-no contact was detected and one because the approach pose was in collision. Only one completed
-placement landed close to its target (4.1 mm, 1.6 degrees); the others tumbled or were thrown at
-release, and one tower collapsed. The release from a kinematically held stone to a free stone is
-the weak point of the implementation; it does not affect the calibration experiments, which use
-the oracle lowering.
+Cartesian impedance descent at 1 cm/s, contact detection from the wrist force, a compliant
+handover in which a force limited spring holds the stone to the hand and fades to zero while
+the fingers open, and retract. At study scale the arm completed 3 of 7 placements, all three
+within 2.8 mm and 0.05 degrees of the target, with no collapses; three placements found no
+feasible grasp and one stone moved 7 mm during the pick descent. The quick profile demonstration
+completed 7 of 8. Every completed release landed on target in both demonstrations; grasp
+planning on irregular stones next to a tower is the step that most often fails.
 
 ## Hypotheses
 
 | Hypothesis | Outcome at study scale |
 | --- | --- |
-| H1: with exact inputs the static tilt margin matches the critical tilt to the cone discretisation error | Not supported. Single stones: bias +2.7 degrees, Spearman 0.83. Stacks: bias +4.3 degrees. The error falls with a coarser cone, so the feasibility and stability gap dominates. |
-| H2: a point estimate is overconfident | Supported (ECE 0.42, reliability below the diagonal at high probability). |
-| H3: Monte Carlo is calibrated to ECE 0.05 and first order fails near zero margin | Monte Carlo is the best calibrated method (ECE 0.15 to 0.17) but misses 0.05; first order is worse (0.23). |
-| H4: underside geometry dominates for flat stones, friction for blocky stones | Not supported: shape uncertainty on observed surface dominates for every class and friction contributes little (in hand views observe the underside). |
-| H5: a lower confidence bound objective reduces collapses at a small height cost | Inconclusive at 10 towers per value. |
+| H1: with exact inputs the static tilt margin matches the critical tilt to the cone discretisation error | Not supported. Single stones: bias +3.6 degrees, Spearman 0.83. The bias grows with a finer cone, so the gap between feasibility and stability dominates. The rocking margin reduces the bias to -0.6 degrees. |
+| H2: a point estimate is overconfident | Supported (ECE 0.44, predictions at 0 or 1). |
+| H3: Monte Carlo is calibrated to ECE 0.05 and first order fails near zero margin | Monte Carlo is the best calibrated propagation method (ECE 0.16) and misses 0.05; first order is worse (0.22). |
+| H4: underside geometry dominates for flat stones, friction for blocky stones | Not supported as stated. Surface shape dominates for every class; the underside matters most for blocky stones; friction contributes little. |
+| H5: a lower confidence bound objective reduces collapses at a small height cost | Inconclusive at 24 towers per value (0 to 2 collapses per value). |
 
 ## Stills and videos
 
-The showcase tower (`scripts/build_showcase.py --profile study --stone-class blocky_quarry`) is
-four blocky stones, 26 cm tall, built with exact inputs; the planner stopped when no fifth stone
-met the chance constraint. Its top stone was predicted at 5.9 degrees and measured at 0.7
-degrees, the E1 pattern again.
-
-Stills are rendered at 720 x 480 with 64 samples per pixel and the denoiser
-(`scripts/render_stills.py all --width 720 --spp 64`), about 2 to 4 minutes each at 0.4 to 0.7
-million rays per second while the experiments shared the machine. All twelve shots exist in
-`results/stills` (H10 and H12 as a triptych and a strip plus their panels). The tilt and collapse
-clips used by H6, H12, V3 and V4 were re-recorded on a world rebuilt from the stored stones with
-mu = 0.6 for every pair (`scripts/reclip_showcase.py`), because the first clips stopped at 3 to 4
-degrees of tilt.
-
-![H1](stills/H1_tower_at_dusk.png)
-![H7](stills/H7_section_thrust_line.png)
-![H10](stills/H10_triptych.png)
-![H12](stills/H12_tilt_strip.png)
-
-The nine videos are in `results/videos` as H.265 MP4 files with their PNG frames, at 480 x 270,
-8 samples per pixel with the denoiser, 24 frames per second and a 180 degree shutter
-(`scripts/render_videos.py all --width 480 --spp 8`). Durations are shortened from the
-specification: V1 1.5 s per stone, V2 4.5 s, V3 a 4x time lapse of the tilt to 10 degrees, V4
-the collapse at 240 frames per second effective, V5 6 s of the shake, V6 to V9 3 s each.
+The stills (1920 pixels wide, 1024 samples per pixel) and videos (960 x 540) are being rendered
+from the rebuilt showcase tower by `scripts/run_renders_v2.sh` (log
+`results/logs/run_renders_v2.log`). This section is updated when they finish.
 
 An interactive WebGL viewer of the showcase tower with overlay toggles (extension 9 of Section 14)
 is written by `scripts/export_viewer.py` to `results/viewer/tower_viewer.html`.
 
 ## Limitations
 
-- The experiments run at study scale (24 towers per main condition), so the confidence bands in
-  the reliability diagrams are wide.
+- The experiments run at study scale (24 towers per condition), so the confidence bands in the
+  reliability diagrams are wide.
+- The outcomes come from the developer's engine. MuJoCo and Drake agree on settled towers, and
+  scoring the calibration against their outcomes is a natural next step.
 - Towers under perception stop at one stone with delta = 0.05; tower growth under uncertainty is
   studied in E4 with delta = 0.3.
 - The dynamic failure rule (5 mm or 2 degrees) and the static contact band (0.5 mm) interact, and
   the E1 bias depends on both.
-- Calibration runs use the oracle lowering. The arm placement runs end to end but its release is
-  unreliable (one accurate placement in six in the last demonstration).
-- The decision times recorded in E1 and E2 include the probe placements and their tests; E4 to E6
-  record the decision alone (14 to 290 s at study scale).
-- Drake disagrees with the developer's engine and MuJoCo on stacked towers; PyBullet could not be
-  installed for Python 3.13.
-- The renders use reduced resolution and sample counts; the scripts accept the specification
-  settings.
+- E1, E2, E5 and E6 use the oracle lowering. In E4 a third of the placements fall back to it.
+- The decision times recorded in E1 and E2 include the probe placements and their tests.
+- PyBullet does not hold most of the settled towers, so the engine comparison rests on MuJoCo and
+  Drake.
+- The Sobol indices average 5 to 7 placements per class.
+- The OIDN denoiser is not installed; the renders use the bilateral denoiser.

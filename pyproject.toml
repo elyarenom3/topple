@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "topple"
+version = "0.1.0"
+description = "Calibrated stone balancing with a simulated robot arm"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "pyyaml>=6",
+    "numba>=0.59",
+    "matplotlib>=3.8",
+    "imageio>=2.31",
+    "pillow>=10",
+]
+
+[project.optional-dependencies]
+solvers = ["osqp>=0.6"]
+mesh = ["trimesh>=4", "scikit-image>=0.22"]
+validation = ["mujoco>=3.1", "pybullet>=3.2", "drake>=1.20"]
+dev = ["pytest>=7", "pytest-xdist>=3"]
+
+[tool.setuptools.packages.find]
+include = ["topple*"]
+
+[tool.setuptools.package-data]
+topple = ["render/data/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["slow: end to end runs (deselect with -m 'not slow')"]
+filterwarnings = ["ignore::DeprecationWarning"]

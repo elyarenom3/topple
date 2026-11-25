@@ -1,0 +1,31 @@
+# Study profile: the scale used for the experiments reported in results/REPORT.md.
+# Between quick (smoke tests) and default (full specification scale): 320 x 240 depth images,
+# 3 mm voxels, 64 Monte Carlo samples, 24 azimuths for the static tilt margin and 6 for the
+# dynamic tilt test. Every other number follows configs/default.yaml.
+extends: default
+experiment:
+  n_towers: 24
+  max_stones: 6
+  probes_per_step: 2
+  profile: study
+stones:
+  n_pile: 8
+  sdf_spacing: null
+sensor:
+  width: 320
+  height: 240
+  views_per_stone: 10
+  in_hand_views: 3
+tsdf:
+  voxel: 0.003
+  posterior_samples: 16
+propagation:
+  mc_samples: 64
+statics:
+  n_azimuth: 24
+planner:
+  n_candidates: 10
+harness:
+  tilt_azimuths: 6
+  push_directions: 6
+  shake_ramp_s: 6.0

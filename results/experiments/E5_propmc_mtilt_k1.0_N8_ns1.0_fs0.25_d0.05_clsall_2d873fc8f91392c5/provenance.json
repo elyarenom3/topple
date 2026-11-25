@@ -1,0 +1,43 @@
+{
+ "config_hash": "2d873fc8f91392c5",
+ "config_path": "/Users/adminelya/Desktop/Projects/UCL/topple/configs/study.yaml",
+ "commit": "nogit",
+ "libraries": {
+  "python": "3.13.5",
+  "numpy": "2.1.3",
+  "scipy": "1.15.3",
+  "numba": "0.61.0",
+  "matplotlib": "3.10.0",
+  "osqp": "1.1.3",
+  "trimesh": "5.2.2",
+  "mujoco": "4.0.1",
+  "pybullet": null,
+  "pydrake": "present",
+  "skimage": "0.25.0"
+ },
+ "machine": {
+  "platform": "macOS-15.7.3-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "processor": "arm",
+  "node": "redacted"
+ },
+ "timestamp": "2026-11-25T16:48:01",
+ "condition": {
+  "name": "E5",
+  "oracle": false,
+  "propagation": "mc",
+  "margin": "tilt",
+  "kappa": 1.0,
+  "placement": "teleport",
+  "tests": [
+   "fixed"
+  ],
+  "cone_sides": 8,
+  "stone_class": null,
+  "noise_scale": 1.0,
+  "friction_log_sigma": 0.25,
+  "extra": {}
+ },
+ "elapsed_s": 1062.431186914444,
+ "tower_errors": {}
+}

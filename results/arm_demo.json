@@ -1,0 +1,110 @@
+{
+ "summary": {
+  "placements": 8,
+  "arm_completed": 7,
+  "fallback_reasons": [
+   "RuntimeError('stone pushed by 14 mm during the pick descent'"
+  ],
+  "median_position_error_mm_arm": 0.5303503115240593,
+  "median_rotation_error_deg_arm": 0.43759877103071154,
+  "collapses_arm": 0
+ },
+ "rows": [
+  {
+   "tower": 0,
+   "placement": 0,
+   "stone": "blocky_quarry_005",
+   "arm_completed": true,
+   "fallback_reason": null,
+   "position_error_mm": 0.15343154067442802,
+   "rotation_error_deg": 0.28395083132460736,
+   "collapsed": false,
+   "m_hat": 26.63916015625,
+   "m_true": 17.30000000000002
+  },
+  {
+   "tower": 0,
+   "placement": 1,
+   "stone": "blocky_quarry_002",
+   "arm_completed": true,
+   "fallback_reason": null,
+   "position_error_mm": 0.5303503115240593,
+   "rotation_error_deg": 0.43759877103071154,
+   "collapsed": false,
+   "m_hat": 11.5595703125,
+   "m_true": 7.3649999999999585
+  },
+  {
+   "tower": 0,
+   "placement": 2,
+   "stone": "blocky_quarry_004",
+   "arm_completed": true,
+   "fallback_reason": null,
+   "position_error_mm": 0.877072163954994,
+   "rotation_error_deg": 1.082094612046029,
+   "collapsed": false,
+   "m_hat": 7.5615234375,
+   "m_true": 4.899999999999988
+  },
+  {
+   "tower": 1,
+   "placement": 0,
+   "stone": "blocky_quarry_005",
+   "arm_completed": true,
+   "fallback_reason": null,
+   "position_error_mm": 0.03934912308213949,
+   "rotation_error_deg": 0.005786565832371838,
+   "collapsed": false,
+   "m_hat": 18.99072265625,
+   "m_true": 19.71999999999933
+  },
+  {
+   "tower": 1,
+   "placement": 1,
+   "stone": "blocky_quarry_006",
+   "arm_completed": true,
+   "fallback_reason": null,
+   "position_error_mm": 0.4013340638377754,
+   "rotation_error_deg": 0.26986403286233396,
+   "collapsed": false,
+   "m_hat": 17.73046875,
+   "m_true": 9.845000000000264
+  },
+  {
+   "tower": 1,
+   "placement": 2,
+   "stone": "blocky_quarry_004",
+   "arm_completed": true,
+   "fallback_reason": null,
+   "position_error_mm": 0.8420078767929586,
+   "rotation_error_deg": 0.6492370367139426,
+   "collapsed": false,
+   "m_hat": 15.9921875,
+   "m_true": 2.3849999999999727
+  },
+  {
+   "tower": 2,
+   "placement": 0,
+   "stone": "blocky_quarry_004",
+   "arm_completed": false,
+   "fallback_reason": "RuntimeError('stone pushed by 14 mm during the pick descent')",
+   "position_error_mm": 0.024865180065225322,
+   "rotation_error_deg": 0.023919607894201896,
+   "collapsed": false,
+   "m_hat": 22.6845703125,
+   "m_true": 31.750000000000085
+  },
+  {
+   "tower": 2,
+   "placement": 1,
+   "stone": "blocky_quarry_002",
+   "arm_completed": true,
+   "fallback_reason": null,
+   "position_error_mm": 1.0587819886721361,
+   "rotation_error_deg": 1.805733383534818,
+   "collapsed": false,
+   "m_hat": 20.12060546875,
+   "m_true": 9.540000000000026
+  }
+ ]
+}

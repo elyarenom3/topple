@@ -1,0 +1,34 @@
+# Smoke test profile: everything smaller so that the whole pipeline runs in minutes.
+extends: default
+experiment:
+  n_towers: 3
+  max_stones: 5
+  profile: quick
+  probes_per_step: 1
+stones:
+  n_pile: 6
+  sdf_spacing: 0.003
+  subdivisions: 2
+sensor:
+  width: 160
+  height: 120
+  views_per_stone: 6
+  in_hand_views: 2
+tsdf:
+  voxel: 0.004
+  posterior_samples: 8
+propagation:
+  mc_samples: 32
+statics:
+  n_azimuth: 12
+planner:
+  n_candidates: 8
+  settle_steps: 800
+harness:
+  tilt_azimuths: 4
+  push_directions: 4
+  shake_ramp_s: 3.0
+render:
+  width: 320
+  height: 213
+  spp: 16

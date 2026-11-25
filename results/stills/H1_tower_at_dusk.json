@@ -1,0 +1,20 @@
+{
+ "name": "H1_tower_at_dusk",
+ "width": 320,
+ "height": 213,
+ "spp": 16,
+ "seconds": 3.9431118965148926,
+ "rays": 8139316,
+ "rays_per_s": 2130488.4390652347,
+ "focal_mm": 85,
+ "f_number": 2.8,
+ "dof": [
+  86.0969047619048,
+  1.3166228425086124,
+  1.355440527573071
+ ],
+ "exposure": 0.03317599895684057,
+ "spectral": true,
+ "mnee": true,
+ "lens": "thin"
+}

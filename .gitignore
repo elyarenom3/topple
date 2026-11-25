@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+results/videos/*/
+results/stills/.*_ckpt.npz
+results/logs/
+results/showcase_quick/
+*.egg-info/
+.DS_Store
+.conda311/
+.venv*/
+results/showcase_pile*/
+# EXR render passes are large and regenerable from the scripts; the PNG stills are kept
+*.exr

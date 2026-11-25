@@ -1,0 +1,14 @@
+{
+ "n_stones": 4,
+ "stones": [
+  "blocky_quarry_003",
+  "blocky_quarry_010",
+  "blocky_quarry_009",
+  "blocky_quarry_007"
+ ],
+ "height_m": 0.26158901238235877,
+ "m_true_final": 0.0,
+ "tilt_fail_time": 9.151000000000368,
+ "collapse_fail_time": 7.981000000001,
+ "shake_fail_time": 8.661000000000639
+}

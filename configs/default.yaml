@@ -1,0 +1,136 @@
+# Default configuration (Section 13). Every number marked "author's choice" in the
+# specification lives here so that experiments vary it through overrides.
+experiment:
+  seed: 0
+  n_towers: 50
+  max_stones: 12
+  profile: full          # full | quick (quick lowers resolutions and sample counts for smoke tests)
+  probes_per_step: 2     # extra candidates tested on clones of the true world per step (calibration data)
+  stop_when_infeasible: true  # the tower is complete when no candidate meets p_hat >= 1 - delta
+
+world:
+  gravity: [0.0, 0.0, -9.81]
+  dt: 0.001              # 1 kHz physics record
+  solver: pgs            # pgs | lemke | xpbd
+  pgs_iterations: 100
+  cone_sides: 8          # N sided polyhedral friction cone (E7 varies 4, 8, 16, 32)
+  contact_margin: 0.0015 # proximity margin for contact generation (m)
+  max_manifold_points: 8
+  merging: false         # adaptive merging (Section 6.5), off in calibration runs
+  restitution: 0.0
+  torsion_radius: 0.002  # contact patch radius for spin friction, m (author's choice)
+  baumgarte: 0.2
+  slop: 0.0005
+
+stones:
+  n_pile: 12
+  pile_layout: grid                # grid (calibration runs) or arc (within reach of the arm)
+  size_range: [0.05, 0.15]        # m
+  density_range: [2500.0, 2800.0] # kg/m^3 (author's choice)
+  classes: [flat_river, blocky_quarry, rounded_cobble]
+  class_boxes:                    # descriptor boxes (elongation, flatness, convexity, sphericity)
+    flat_river:     {elongation: [0.55, 0.95], flatness: [0.25, 0.55], convexity: [0.93, 1.0], sphericity: [0.70, 0.92]}
+    blocky_quarry:  {elongation: [0.55, 1.0],  flatness: [0.55, 1.0],  convexity: [0.90, 1.0], sphericity: [0.78, 0.93]}
+    rounded_cobble: {elongation: [0.65, 1.0],  flatness: [0.65, 1.0],  convexity: [0.96, 1.0], sphericity: [0.90, 1.0]}
+  erosion_steps: 4
+  erosion_eta: 0.002
+  sdf_spacing: 0.001
+  subdivisions: 3
+
+friction:
+  prior_median: 0.6
+  prior_log_sigma: 0.25
+  finger_mu: 1.0
+  ground_mu: 0.6
+
+sensor:
+  width: 640
+  height: 480
+  fov_deg: 58.0
+  baseline_m: 0.075
+  disparity_quant: 0.125           # 1/8 pixel
+  noise_scale: 1.0                 # E5 varies 0.5, 1, 2, 4
+  model: nguyen                    # nguyen | khoshelham | handa | none
+  views_per_stone: 12
+  in_hand_views: 4
+  pose_noise_rot_deg: 0.3
+  pose_noise_trans_m: 0.002
+  icp_iterations: 10
+
+tsdf:
+  voxel: 0.002
+  truncation: 0.008
+  completion: hull                 # hull | mirror | gp | poisson
+  correlation_length: 0.005
+  posterior_samples: 32
+  smooth_iterations: 10            # Taubin iterations on the posterior mean mesh
+  pose_lever_arm_m: 0.35           # camera distance for the rotation to translation pose error
+
+propagation:
+  method: mc                       # mc | unscented | first_order | none
+  mc_samples: 256
+  shape_modes: 10
+  survival_tilt_deg: 3.0
+
+statics:
+  cone_sides: 8
+  n_azimuth: 36
+  bisection_tol_deg: 0.05
+  fc_force_budget_factor: 2.0
+  fc_length_scale: 0.1
+  contact_band: 0.0005             # static contact set: points within 0.5 mm after seating (author's choice)
+  geometry: hull                   # hull (matches the engine's collision geometry) or mesh
+  qp_solver: osqp                  # osqp | scipy
+
+planner:
+  kappa: 1.0                       # risk weight (E4 varies 0, 0.5, 1, 2)
+  lambda_h: 200.0                  # degrees of margin per metre of height gain (author's choice)
+  delta: 0.05                      # chance constraint p >= 1 - delta
+  n_candidates: 24
+  settle_steps: 800
+  settle_damping: 60.0             # velocity damping (1/s) during settling procedures only (author's choice)
+  optimiser: nelder_mead           # cma_es | nelder_mead | gradient
+  inflate_quantile: 0.95
+
+arm:
+  model: panda7
+  base: [-0.45, 0.0, 0.0]
+  approach_height: 0.03
+  descend_speed: 0.01
+  impedance_stiffness: 1500.0
+  impedance_damping: 120.0
+  contact_force_threshold: 0.5
+  release_seconds: 0.5
+  finger_max: 0.08                 # finger opening (m); the arm demonstration uses 0.12
+
+harness:
+  tilt_rate_deg_s: 0.5
+  tilt_azimuths: 8
+  tilt_max_deg: 60.0
+  shake_freq_hz: 2.0
+  shake_max_g: 0.5
+  shake_ramp_s: 10.0
+  push_directions: 8
+  push_ramp_n_s: 5.0
+  fixed_tilt_deg: 3.0
+  fixed_hold_s: 2.0
+  fail_disp_m: 0.005
+  fail_rot_deg: 2.0
+
+render:
+  width: 1024
+  height: 683
+  spp: 64
+  max_depth_diffuse: 12
+  max_depth_specular: 64
+  rr_start_depth: 3
+  denoise: true
+  spectral: false
+  tile: 64
+  flip_target: 0.05
+  temporal_flip_target: 0.02
+
+eval:
+  bins: 10
+  bootstrap: 200
+  coverage_levels: [0.5, 0.8, 0.95]

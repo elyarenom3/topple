@@ -1,0 +1,11 @@
+{
+ "flip_mean": 0.0033243518314865533,
+ "target": 0.05,
+ "mean_radiance_ratio_ours_over_ref": 1.0035096536734005,
+ "width": 150,
+ "height": 100,
+ "spp": 128,
+ "spp_ref": 128,
+ "seconds_ours": 37.00772309303284,
+ "seconds_ref": 4.22216010093689
+}

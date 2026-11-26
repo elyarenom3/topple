@@ -12,3 +12,5 @@ results/showcase_quick/
 results/showcase_pile*/
 # EXR render passes are large and regenerable from the scripts; the PNG stills are kept
 *.exr
+
+reports/

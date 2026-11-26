@@ -43,8 +43,8 @@ report are kept in `results/archive_v1/`.
    topple's engine on 84 to 90% of outcomes and are stricter. The prediction methods rank the
    same way in all three engines, and the recalibrated Monte Carlo probability is the best
    calibrated in each (ECE 0.069 to 0.087 on E2all).
-9. The path tracer matches Mitsuba 3 on a shared scene (FLIP 0.003). The stills and videos are
-   being rendered at 1920 and 960 pixels wide.
+9. The path tracer matches Mitsuba 3 on a shared scene (FLIP 0.003). Twelve stills (1920 pixels
+   wide) and nine videos (960 x 540) are rendered from the showcase tower.
 
 ## Implementation
 
@@ -475,9 +475,37 @@ planning on irregular stones next to a tower is the step that most often fails.
 
 ## Stills and videos
 
-The stills (1920 pixels wide, 1024 samples per pixel) and videos (960 x 540) are being rendered
-from the rebuilt showcase tower by `scripts/run_renders_v2.sh` (log
-`results/logs/run_renders_v2.log`). This section is updated when they finish.
+`python scripts/render_stills.py all --width 1920 --spp 512` and
+`python scripts/render_videos.py all --width 960 --spp 16`
+
+All renders come from the rebuilt showcase tower (`results/showcase`, 22.4 cm). The stills are
+1920 x 1280 at 512 samples per pixel, except H5 (128, its volumetric ghosts are slow to trace),
+H10 (three 640 x 896 panels) and H12 (five 384 x 576 frames). Render times are on the 12 core
+CPU path tracer; the settings of each still are in the JSON file next to it.
+
+| Still | Contents | Lens and transport | Minutes |
+| --- | --- | --- | --- |
+| H1 tower at dusk | sky, wet slab, sun caustics | thin lens, spectral, manifold NEE | 20 |
+| H2 contact, and with forces | macro of the load bearing contact | traced double Gauss lens | 19 each |
+| H3 arm at release | the arm opening its fingers | thin lens | 19 |
+| H4 field of candidates | the pile, top view | thin lens | 14 |
+| H5 posterior ghosts | shape samples of the next stone | thin lens, 128 samples | 71 |
+| H6 collapse | 1/30 s exposure of the collapse | thin lens, spectral, manifold NEE | 24 |
+| H7 section with thrust line | cut tower, contact forces | thin lens | 18 |
+| H8 stability landscape | objective over the tower top | thin lens | 21 |
+| H9 long exposure shake | trajectories of the shake test | thin lens | 21 |
+| H10 triptych | beauty, section, density tint | thin lens | 16 |
+| H11 hundred towers | one tile per E2all tower, tinted by outcome | orthographic | 17 |
+| H12 tilt strip | five frames of the tilt test | thin lens | 10 |
+
+The videos are 960 x 540 at 24 frames per second: V1 build (396 frames), V2 scan (108), V3 tilt
+test (24), V4 collapse in slow motion with modal impact sound (144), V5 shake table (144), V6
+hundred towers (72), V7 posterior to decision (72), V8 force flow (72) and V9 sweeping section
+(72).
+
+![H1](stills/H1_tower_at_dusk.png)
+![H6](stills/H6_collapse.png)
+![H10](stills/H10_triptych.png)
 
 An interactive WebGL viewer of the showcase tower with overlay toggles (extension 9 of Section 14)
 is written by `scripts/export_viewer.py` to `results/viewer/tower_viewer.html`.

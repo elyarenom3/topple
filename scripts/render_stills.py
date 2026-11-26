@@ -433,8 +433,10 @@ def H11(args):
 
     w, h = size(args)
     span = k * pitch + 0.2
-    cam = Camera(position=np.array([0, 0, 6.0]), look_at=np.zeros(3), up=np.array([0, 1.0, 0]), ortho=True, ortho_width=span * w / h, width=w, height=h)
-    finish("H11_hundred_towers", sc, cam, args, exposure_point=np.zeros(3))
+    # orthographic, so the height only sets what lies between: below the key softbox (1.06 m)
+    cam = Camera(position=np.array([0, 0, 0.8]), look_at=np.zeros(3), up=np.array([0, 1.0, 0]), ortho=True, ortho_width=span * w / h, width=w, height=h)
+    # meter on the ground between tiles (a tile sits at the origin when the grid side is odd)
+    finish("H11_hundred_towers", sc, cam, args, exposure_point=np.array([0.5 * pitch, 0.5 * pitch, 0.001]))
 
 
 def H12(args):
@@ -465,15 +467,24 @@ def H12(args):
         t = rec.times[0] + a / rate
         if t > rec.times[-1]:
             t = rec.times[-1]
-        lo, hi = SHOW.tower_bounds()
+        # frame on the tower where the tilt clip has it (its frame can differ from the showcase pose)
+        V = np.concatenate([SHOW.meshes[i].transformed(_clip_pose(rec, inv[i], rec.times[0])).vertices for i in SHOW.tower_ids])
+        lo, hi = V.min(axis=0), V.max(axis=0)
+        lo[2] = 0.0
         c = 0.5 * (lo + hi)
+        lo0, hi0 = SHOW.tower_bounds()
+        shift = c - 0.5 * (lo0 + hi0)
         sc = SHOW.base_scene("studio_slab", "studio", center=c, size=float(np.max(hi - lo)))
         # the camera is fixed to the ground: gravity rotates, so the scene is shown in the ground frame
         for i in SHOW.tower_ids:
             sc.add(SHOW.meshes[i], SHOW.materials[i], _clip_pose(rec, inv[i], t), object_id=int(i))
         for mesh, col in ov.dial(c + np.array([0.12, -0.05, 0.15]), 0.04, a, (m_hat, m_hat), vmin=0.0, vmax=max(30.0, m_hat * 1.5), normal=(0, -1.0, 0)):
             sc.add_overlay(mesh, col, alpha=1.0)
-        cam = SHOW.camera("H12", wf, int(wf * 1.5))
+        cam = SHOW.camera("H12", wf, int(wf * 1.5), fill=0.4)  # portrait frame: room for the stones beside the tower
+        cam.position = np.asarray(cam.position, dtype=float) + shift
+        cam.look_at = np.asarray(cam.look_at, dtype=float) + shift
+        if hasattr(cam, "__post_init__"):
+            cam.__post_init__()
         name = f"H12_tilt_{a:.1f}deg".replace(".", "p")
         finish(name, sc, cam, args)
         frames.append(iio.imread(STILLS / f"{name}.png"))

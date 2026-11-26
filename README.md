@@ -10,6 +10,34 @@ Every module is written for this project: stone generator, rigid body solver, st
 stability analyser, simulated depth sensor and estimator, planner, arm controller, path tracer
 and evaluator. The rigid body solver is cross checked against MuJoCo, Drake and PyBullet.
 
+![Showcase tower at dusk (H1)](results/stills/H1_tower_at_dusk.png)
+
+## Results at a glance
+
+Study scale: 24 towers per condition, 95% bootstrap intervals over towers. The full write up,
+with every table and the command that produced it, is in [results/REPORT.md](results/REPORT.md).
+
+| Question | Result |
+| --- | --- |
+| With exact inputs, does the static margin predict the measured critical tilt? (E1) | It ranks it well (Spearman 0.83 on single stones) and reads about 3 degrees high. The rocking aware margin added here brings the bias to -0.6 degrees and the RMSE from 6.1 to 3.5 degrees. |
+| Under perception, which propagation method states the best calibrated survival probability? (E2) | Monte Carlo (ECE 0.16, Brier 0.21). The point estimate is overconfident (ECE 0.44). |
+| Final method: Monte Carlo with a learned recalibration step | Trained on other experiments and tested on held out ones (1,607 placements): Brier from 0.236 to 0.175, ECE from 0.165 to 0.048, AUC from 0.72 to 0.82. |
+| Do the results hold in independent engines? | Every E1all and E2all placement was replayed in MuJoCo and Drake. Both agree with topple's outcome on 84 to 90% of placements, the methods rank the same way, and the recalibrated probability is the best calibrated in every engine (ECE 0.069 to 0.087). |
+| Can towers grow under perception and stay calibrated? (E2grow) | With the chance constraint at delta 0.3, towers grow from 1.0 to 1.6 stones on average (up to 3 stones and 21 cm) with no collapses. On stacked placements the ECE is 0.10, and 0.056 after recalibration. |
+| What drives the margin uncertainty? (E3) | Surface shape, for every stone class; the underside matters most for blocky stones. |
+| Is the renderer correct? | It matches Mitsuba 3 on a shared scene (mean FLIP 0.003). |
+
+![Reliability of the stated and recalibrated survival probability](results/recalibration/recalibration_reliability.png)
+
+| | |
+| --- | --- |
+| ![Arm at release (H3)](results/stills/H3_arm_at_release.png) | ![Collapse at 1/30 s (H6)](results/stills/H6_collapse.png) |
+| Arm at release (H3) | Collapse at 1/30 s (H6) |
+| ![Long exposure of the shake test (H9)](results/stills/H9_long_exposure_shake.png) | ![Beauty, section and density tint (H10)](results/stills/H10_triptych.png) |
+| Shake test as a long exposure (H9) | Beauty, section with thrust line, and density tint (H10) |
+
+All twelve stills are in `results/stills` and the nine videos in `results/videos`.
+
 ## Install
 
 ```bash
@@ -102,12 +130,16 @@ Figures and renders, one command each:
 | F11 sensitivity | `python scripts/fig_results.py F11` |
 | F12 cone sides and margin definitions | `python scripts/fig_results.py F12` |
 | showcase tower (input to the renders) | `python scripts/build_showcase.py --profile study --stone-class blocky_quarry` |
-| H1 to H12 stills | `python scripts/render_stills.py all --width 1920 --spp 1024` |
-| V1 to V9 videos | `python scripts/render_videos.py all --width 960 --spp 32` |
+| H1 to H12 stills | `python scripts/render_stills.py all --width 1920 --spp 512` |
+| V1 to V9 videos | `python scripts/render_videos.py all --width 960 --spp 16` |
 | R1 renderer comparison with Mitsuba 3 | `python scripts/fig_mitsuba_comparison.py` |
 | arm placement demonstration | `python scripts/arm_demo.py --profile quick` |
 | WebGL viewer of the showcase tower | `python scripts/export_viewer.py` |
 | results table and metrics | `python scripts/make_report.py` |
+| baselines for the survival probability | `python scripts/fig_baselines.py` |
+| Monte Carlo with learned recalibration | `python scripts/fig_recalibration.py` |
+| replay in MuJoCo and Drake | `python scripts/run_engine_truth.py --exp E1all` (and `--exp E2all`), then `python scripts/fig_engine_truth.py` |
+| E2grow (delta 0.3) | `python scripts/run_experiment.py --condition E2grow --profile study --towers 24 --delta 0.3`, then `python scripts/fig_e2grow.py` |
 
 `python scripts/make_all.py --profile quick` runs everything at smoke scale.
 

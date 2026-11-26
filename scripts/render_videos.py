@@ -326,9 +326,11 @@ def V6(args):
                 sc.add(mw, Material(name="tile", base_color=col, roughness=0.6))
         span = k * pitch + 0.2
         zoom = 1.0 - 0.25 * float(min_jerk(np.array([u]))[0])
-        cam = Camera(position=np.array([0, 0, 6.0]), look_at=np.zeros(3), up=np.array([0, 1.0, 0]), ortho=True, ortho_width=span * zoom * w / h, width=w, height=h)
+        # orthographic, so the height only sets what lies between: below the key softbox (1.06 m)
+        cam = Camera(position=np.array([0, 0, 0.8]), look_at=np.zeros(3), up=np.array([0, 1.0, 0]), ortho=True, ortho_width=span * zoom * w / h, width=w, height=h)
         if writer is None:
-            exposure = key_light_exposure(sc, np.zeros(3), [0, 0, 1])
+            # meter on the ground between tiles (a tile sits at the origin when the grid side is odd)
+            exposure = key_light_exposure(sc, np.array([0.5 * pitch, 0.5 * pitch, 0.001]), [0, 0, 1])
             writer = _writer("V6_hundred_towers", exposure, args)
         _render_frame(sc, cam, args, writer)
     _encode("V6_hundred_towers", args, {"frames": n_frames, "towers": len(towers)})

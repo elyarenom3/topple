@@ -151,6 +151,13 @@ JAX is not used: margin derivatives come from the dual solution of the linear pr
     opens 8 cm); the calibration runs keep the grid layout. These two config keys were added after
     the study runs; their defaults reproduce the earlier behaviour.
 
+- **Additions beyond the specification.**
+  - A learned recalibration of the Monte Carlo survival probability (`eval/recalibration.py`):
+    gradient boosted trees on the Monte Carlo outputs and the placement context, trained on other
+    experiment groups with tower indices held out. It is reported next to the specified methods.
+  - E2grow repeats E2all with delta = 0.3 so that towers grow under perception.
+  - Baselines: curve fits on each margin and learned classifiers on the stated outputs.
+
 ## Rendering (Section 10)
 
 - The sky is the Hošek and Wilkie (2012) model with the authors' CIE XYZ coefficient tables (BSD
@@ -190,10 +197,16 @@ resist spin) and point contact with the ground (a compliant pressure field moves
 pressure inside the tipping edge, so a block on the ground tipped about 2 degrees early);
 PyBullet uses 200 solver iterations, a 0.5 mm convex margin (its default margin rounds small
 stones) and spinning friction mu r_t. A test checks that a settled three stone tower holds for
-2 s at zero tilt in every engine, and F4 uses only towers that hold in the developer's engine.
+2 s at zero tilt in every engine, and F4 uses only towers that hold in topple's engine.
+
+`validation/replay.py` rebuilds any recorded placement from its keyed random streams (stones,
+friction, pile and perceived offsets) and runs the harness tests in MuJoCo and Drake, so the
+stated predictions of E1all and E2all are also scored with those engines' outcomes as the truth
+(`scripts/run_engine_truth.py`, `scripts/fig_engine_truth.py`). Probes are replayed on a copy of
+the tower at their step, before the building placement of that step.
 
 ## Items not implemented
 
 - The force torque placement correction of arXiv:2404.17668 (Section 9.6, optional).
-- The extensions of Section 14, apart from the arm placement demonstration and the friction slip
-  measurement posterior, which are part of the core modules.
+- The extensions of Section 14, apart from the arm placement demonstration, the friction slip
+  measurement posterior (both part of the core modules) and the WebGL viewer (extension 9).

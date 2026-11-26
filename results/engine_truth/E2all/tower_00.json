@@ -1,0 +1,165 @@
+{
+ "exp": "E2all_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_d0.05_clsall_2d873fc8f91392c5",
+ "tower": 0,
+ "engines": [
+  "mujoco",
+  "drake"
+ ],
+ "seconds": 319.60382890701294,
+ "rows": [
+  {
+   "tower": 0,
+   "placement": 0,
+   "stone": "rounded_cobble_004",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 1.7349999999999866,
+    "collapsed": false,
+    "p_hat": 0.03125,
+    "m_hat": 1.7973556518554688
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 1.5949999999999895,
+     "fixed": 0.0,
+     "settle_shift_m": 9.620905020723578e-05,
+     "seconds": 0.37978541699703783
+    },
+    "drake": {
+     "tilt": 1.6549999999999883,
+     "fixed": 0.0,
+     "settle_shift_m": 5.702070348883099e-05,
+     "seconds": 8.35330683295615
+    }
+   },
+   "seconds": 9.253231165930629
+  },
+  {
+   "tower": 0,
+   "placement": 0,
+   "stone": "rounded_cobble_007",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 2.159999999999976,
+    "collapsed": false,
+    "p_hat": 0.75,
+    "m_hat": 4.772125244140625
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 1.2549999999999952,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0006821863270273603,
+     "seconds": 0.19251608301419765
+    },
+    "drake": {
+     "tilt": 0.9900000000000008,
+     "fixed": 0.0,
+     "settle_shift_m": 1.685355449043311e-05,
+     "seconds": 6.813006999902427
+    }
+   },
+   "seconds": 7.215168874943629
+  },
+  {
+   "tower": 0,
+   "placement": 0,
+   "stone": "blocky_quarry_008",
+   "probe": false,
+   "tag": null,
+   "recorded": {
+    "y": 1.0,
+    "m_true": 28.439999999999657,
+    "collapsed": false,
+    "p_hat": 0.984375,
+    "m_hat": 17.481948852539062
+   },
+   "replay_collapsed": false,
+   "topple_replay": {
+    "tilt": 28.439999999999657,
+    "fixed": 1.0
+   },
+   "engines": {
+    "mujoco": {
+     "tilt": 25.395000000000028,
+     "fixed": 1.0,
+     "settle_shift_m": 7.731731629023956e-05,
+     "seconds": 0.45170558395329863
+    },
+    "drake": {
+     "tilt": 23.08500000000002,
+     "fixed": 1.0,
+     "settle_shift_m": 0.0002251004086655229,
+     "seconds": 18.005895832902752
+    }
+   },
+   "seconds": 34.50515241699759
+  },
+  {
+   "tower": 0,
+   "placement": 1,
+   "stone": "flat_river_002",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 1.219999999999996,
+    "collapsed": false,
+    "p_hat": 0.046875,
+    "m_hat": 0.48685455322265625
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 0.0,
+     "fixed": 0.0,
+     "settle_shift_m": 0.035798102476413685,
+     "seconds": 0.07319104101043195
+    },
+    "drake": {
+     "tilt": 1.3099999999999956,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0009170425243009707,
+     "seconds": 122.73245537502225
+    }
+   },
+   "seconds": 123.37708237499464
+  },
+  {
+   "tower": 0,
+   "placement": 1,
+   "stone": "rounded_cobble_004",
+   "probe": true,
+   "tag": "final_infeasible",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 2.3499999999999766,
+    "collapsed": false,
+    "p_hat": 0.0,
+    "m_hat": 0.0
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 2.1649999999999774,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0009569812193090062,
+     "seconds": 0.28197954199276865
+    },
+    "drake": {
+     "tilt": 0.27500000000000013,
+     "fixed": 0.0,
+     "settle_shift_m": 0.004535958053263707,
+     "seconds": 6.466416125069372
+    }
+   },
+   "seconds": 9.763887582928874
+  }
+ ]
+}

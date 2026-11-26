@@ -2,7 +2,7 @@
 
 Reads the replays written by run_engine_truth.py (results/engine_truth/<experiment>/tower_XX.json)
 and the experiment records. For each engine it reports how often the outcome agrees with the
-developer's engine, and the calibration of the stated survival probability (Brier, ECE, AUC) and
+topple's engine, and the calibration of the stated survival probability (Brier, ECE, AUC) and
 the error of the stated margin (bias, RMSE, Spearman) with that engine's outcomes as the truth.
 Intervals are 95% bootstrap intervals over towers. Uses whatever towers have been replayed.
 
@@ -35,13 +35,19 @@ def key(r):
 def load(exp: str):
     """Rows with the stated predictions and the outcome in each engine."""
     rec_path = sorted(glob.glob(str(ROOT / "results" / "experiments" / f"{exp}_*" / "records.json")))[0]
-    recs = {key(r): r for r in json.load(open(rec_path))}
+    recs = {}
+    for r in json.load(open(rec_path)):
+        recs.setdefault(key(r), []).append(r)
     rows = []
     for f in sorted(glob.glob(str(OUT / exp / "tower_*.json"))):
         for row in json.load(open(f))["rows"]:
-            r = recs.get(key(row))
-            if r is None:
+            cands = recs.get(key(row), [])
+            if not cands:
                 continue
+            # the same stone can be probed twice at one step: match on the recorded prediction and outcome
+            rec = row.get("recorded", {})
+            r = min(cands, key=lambda c: abs(c["p_hat"] - rec.get("p_hat", c["p_hat"])) + abs(c["m_true"] - rec.get("m_true", c["m_true"])) + abs(c["m_hat"] - rec.get("m_hat", c["m_hat"])))
+            cands.remove(r)
             out = {"tower": row["tower"], "record": r, "y": {"topple": float(r["y"])}, "tilt": {"topple": float(r["m_true"])}, "replay": row.get("topple_replay")}
             ok = True
             for e, v in row["engines"].items():
@@ -81,7 +87,7 @@ def _recalibrated(test):
     train = []
     for p in sorted(glob.glob(str(ROOT / "results" / "experiments" / "*" / "records.json"))):
         name = Path(p).parent.name
-        if name.startswith(("E1all", "E2all", "E5_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_")):
+        if name.startswith(("E1all", "E2all", "E2grow", "E5_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_")):
             continue
         s = settings_from_name(name)
         for r in json.load(open(p)):
@@ -155,8 +161,8 @@ def main():
             continue
         rc = res["replay_check"]
         md += [f"## {exp} ({res['n']} placements, {res['towers']} towers)", "",
-               f"Replay check in the developer's engine: {rc['same_y']} of {rc['n']} building placements give the recorded outcome; largest critical tilt difference {rc['max_tilt_diff_deg']:.2f} degrees.", "",
-               "| Engine | Survival rate | Same outcome as developer's engine | Critical tilt, mean difference (deg) | Spearman |", "| --- | --- | --- | --- | --- |"]
+               f"Replay check in the topple's engine: {rc['same_y']} of {rc['n']} building placements give the recorded outcome; largest critical tilt difference {rc['max_tilt_diff_deg']:.2f} degrees.", "",
+               "| Engine | Survival rate | Same outcome as topple's engine | Critical tilt, mean difference (deg) | Spearman |", "| --- | --- | --- | --- | --- |"]
         for e in ENGINES:
             a = res["agreement"][e]
             md.append(f"| {e} | {a['survival_rate']:.2f} | {'' if e == 'topple' else f'{a['same_y']:.2f}'} | {'' if e == 'topple' else f'{a['tilt_mad_deg']:.2f}'} | {'' if e == 'topple' else f'{a['tilt_spearman']:.2f}'} |")

@@ -1,0 +1,195 @@
+{
+ "exp": "E2all_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_d0.05_clsall_2d873fc8f91392c5",
+ "tower": 15,
+ "engines": [
+  "mujoco",
+  "drake"
+ ],
+ "seconds": 455.99615597724915,
+ "rows": [
+  {
+   "tower": 15,
+   "placement": 0,
+   "stone": "blocky_quarry_001",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 1.0,
+    "m_true": 26.399999999999935,
+    "collapsed": false,
+    "p_hat": 0.921875,
+    "m_hat": 20.775856018066406
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 20.64999999999995,
+     "fixed": 1.0,
+     "settle_shift_m": 2.0696753030097106e-05,
+     "seconds": 0.5118495830101892
+    },
+    "drake": {
+     "tilt": 22.614999999999963,
+     "fixed": 1.0,
+     "settle_shift_m": 0.0004082519641317347,
+     "seconds": 17.413835000013933
+    }
+   },
+   "seconds": 18.180732125067152
+  },
+  {
+   "tower": 15,
+   "placement": 0,
+   "stone": "flat_river_004",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 2.5449999999999693,
+    "collapsed": false,
+    "p_hat": 0.671875,
+    "m_hat": 14.406005859375
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 5.839999999999943,
+     "fixed": 1.0,
+     "settle_shift_m": 0.00026886841851174063,
+     "seconds": 0.43106891703791916
+    },
+    "drake": {
+     "tilt": 1.669999999999988,
+     "fixed": 0.0,
+     "settle_shift_m": 2.5665941563554947e-05,
+     "seconds": 8.284625916043296
+    }
+   },
+   "seconds": 8.896865334012546
+  },
+  {
+   "tower": 15,
+   "placement": 0,
+   "stone": "blocky_quarry_001",
+   "probe": false,
+   "tag": null,
+   "recorded": {
+    "y": 1.0,
+    "m_true": 26.439999999999905,
+    "collapsed": false,
+    "p_hat": 0.90625,
+    "m_hat": 18.482818603515625
+   },
+   "replay_collapsed": false,
+   "topple_replay": {
+    "tilt": 26.439999999999905,
+    "fixed": 1.0
+   },
+   "engines": {
+    "mujoco": {
+     "tilt": 20.44499999999999,
+     "fixed": 1.0,
+     "settle_shift_m": 2.068140979768859e-05,
+     "seconds": 0.5342070830520242
+    },
+    "drake": {
+     "tilt": 22.824999999999985,
+     "fixed": 1.0,
+     "settle_shift_m": 0.0004016144426933101,
+     "seconds": 17.788971042027697
+    }
+   },
+   "seconds": 30.203338415944017
+  },
+  {
+   "tower": 15,
+   "placement": 1,
+   "stone": "flat_river_002",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 0.5850000000000004,
+    "collapsed": false,
+    "p_hat": 0.0625,
+    "m_hat": 0.7625350952148438
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 3.4949999999999717,
+     "fixed": 1.0,
+     "settle_shift_m": 0.04289855677748906,
+     "seconds": 0.9659033329226077
+    },
+    "drake": {
+     "tilt": 1.5649999999999902,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0016038489270776583,
+     "seconds": 231.70460179098882
+    }
+   },
+   "seconds": 233.64771379192825
+  },
+  {
+   "tower": 15,
+   "placement": 1,
+   "stone": "rounded_cobble_006",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 1.6899999999999875,
+    "collapsed": false,
+    "p_hat": 0.0,
+    "m_hat": 0.06586456298828125
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 2.03999999999998,
+     "fixed": 0.0,
+     "settle_shift_m": 0.000310559002071045,
+     "seconds": 0.7395346249686554
+    },
+    "drake": {
+     "tilt": 1.6049999999999893,
+     "fixed": 0.0,
+     "settle_shift_m": 0.00040728004517629325,
+     "seconds": 15.140956124989316
+    }
+   },
+   "seconds": 18.607535291928798
+  },
+  {
+   "tower": 15,
+   "placement": 1,
+   "stone": "rounded_cobble_005",
+   "probe": true,
+   "tag": "final_infeasible",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 0.06499999999999999,
+    "collapsed": false,
+    "p_hat": 0.09375,
+    "m_hat": 0.7217941284179688
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 1.2899999999999945,
+     "fixed": 0.0,
+     "settle_shift_m": 0.00021428910371922518,
+     "seconds": 0.4330388749949634
+    },
+    "drake": {
+     "tilt": 1.6099999999999892,
+     "fixed": 0.0,
+     "settle_shift_m": 0.00040486594901349606,
+     "seconds": 10.839674707967788
+    }
+   },
+   "seconds": 13.74055525008589
+  }
+ ]
+}

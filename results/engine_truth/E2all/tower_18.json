@@ -1,0 +1,135 @@
+{
+ "exp": "E2all_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_d0.05_clsall_2d873fc8f91392c5",
+ "tower": 18,
+ "engines": [
+  "mujoco",
+  "drake"
+ ],
+ "seconds": 305.9240708351135,
+ "rows": [
+  {
+   "tower": 18,
+   "placement": 0,
+   "stone": "rounded_cobble_002",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 1.389999999999994,
+    "collapsed": false,
+    "p_hat": 0.578125,
+    "m_hat": 4.019096374511719
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 1.0699999999999992,
+     "fixed": 0.0,
+     "settle_shift_m": 0.00033395631190478406,
+     "seconds": 0.23561904206871986
+    },
+    "drake": {
+     "tilt": 1.289999999999996,
+     "fixed": 0.0,
+     "settle_shift_m": 1.3598002791169725e-05,
+     "seconds": 7.407070874935016
+    }
+   },
+   "seconds": 7.822356624994427
+  },
+  {
+   "tower": 18,
+   "placement": 0,
+   "stone": "blocky_quarry_006",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 0.7400000000000005,
+    "collapsed": false,
+    "p_hat": 0.609375,
+    "m_hat": 8.976593017578125
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 1.919999999999981,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0017978365661731838,
+     "seconds": 0.5242498749867082
+    },
+    "drake": {
+     "tilt": 0.6850000000000005,
+     "fixed": 0.0,
+     "settle_shift_m": 1.861670324048697e-05,
+     "seconds": 5.2751900840085
+    }
+   },
+   "seconds": 6.028753875056282
+  },
+  {
+   "tower": 18,
+   "placement": 0,
+   "stone": "blocky_quarry_008",
+   "probe": false,
+   "tag": null,
+   "recorded": {
+    "y": 1.0,
+    "m_true": 28.279999999999518,
+    "collapsed": false,
+    "p_hat": 0.984375,
+    "m_hat": 15.304344177246094
+   },
+   "replay_collapsed": false,
+   "topple_replay": {
+    "tilt": 28.279999999999518,
+    "fixed": 1.0
+   },
+   "engines": {
+    "mujoco": {
+     "tilt": 24.85500000000005,
+     "fixed": 1.0,
+     "settle_shift_m": 4.439395145003039e-05,
+     "seconds": 0.5391682080226019
+    },
+    "drake": {
+     "tilt": 25.23000000000004,
+     "fixed": 1.0,
+     "settle_shift_m": 0.00013386162764562678,
+     "seconds": 15.180638125049882
+    }
+   },
+   "seconds": 30.306024458026513
+  },
+  {
+   "tower": 18,
+   "placement": 1,
+   "stone": "blocky_quarry_005",
+   "probe": true,
+   "tag": "final_infeasible",
+   "recorded": {
+    "y": 1.0,
+    "m_true": 4.074999999999966,
+    "collapsed": false,
+    "p_hat": 0.03125,
+    "m_hat": 0.15956878662109375
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 3.039999999999969,
+     "fixed": 0.0,
+     "settle_shift_m": 7.429137906103528e-05,
+     "seconds": 0.6971874170703813
+    },
+    "drake": {
+     "tilt": 3.4499999999999726,
+     "fixed": 1.0,
+     "settle_shift_m": 0.0004678857944500152,
+     "seconds": 119.09009474993218
+    }
+   },
+   "seconds": 122.28502133395523
+  }
+ ]
+}

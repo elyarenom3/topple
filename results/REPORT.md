@@ -17,7 +17,10 @@ report are kept in `results/archive_v1/`.
    +3.2 and 6.1 degrees for the tilt margin over 193 placements.
 3. Under perception, Monte Carlo propagation gives the best calibrated survival probability of
    the propagation methods (ECE 0.16, Brier 0.21). The point estimate is overconfident (0.44),
-   which supports H2. The 0.05 target of H3 is not reached.
+   which supports H2. The 0.05 target of H3 is not reached. With a looser chance constraint (delta 0.3,
+   E2grow) towers under perception grow from 1.0 to 1.6 stones (6.5 to 10.2 cm) with no
+   collapses, and Monte Carlo stays calibrated on the stacked placements (ECE 0.10; 0.056 after
+   recalibration).
 4. The final method adds a learned recalibration step to the Monte Carlo probability, trained on
    the outcomes of other experiments. Over 1,607 placements it lowers the Brier score from 0.236
    to 0.175 and the ECE from 0.165 to 0.048, and raises the AUC from 0.72 to 0.82. It helps in
@@ -34,8 +37,12 @@ report are kept in `results/archive_v1/`.
 7. The arm placed 95 of 142 stones in E4 itself (67%) and handed the rest to the oracle
    lowering, mostly when no grasp was found. In the study scale demonstration, the three
    placements the arm completed landed within 3 mm of the target.
-8. MuJoCo and Drake agree with the developer's engine on the critical tilt of twelve settled
+8. MuJoCo and Drake agree with topple's engine on the critical tilt of twelve settled
    three stone towers (mean difference 1.4 degrees, Spearman 0.75 and 0.90).
+   Replaying every E1all and E2all placement in MuJoCo and Drake, the two engines agree with
+   topple's engine on 84 to 90% of outcomes and are stricter. The prediction methods rank the
+   same way in all three engines, and the recalibrated Monte Carlo probability is the best
+   calibrated in each (ECE 0.069 to 0.087 on E2all).
 9. The path tracer matches Mitsuba 3 on a shared scene (FLIP 0.003). The stills and videos are
    being rendered at 1920 and 960 pixels wide.
 
@@ -79,7 +86,7 @@ the load bearing points first.
 
 **Cross engine (Section 12.2, `scripts/fig_engine_comparison.py`, figure F4).** On a single block
 MuJoCo and Drake reproduce the analytic tipping angle within 3 degrees. Twelve three stone towers
-were settled in the developer's engine and then settled, tilted and perturbed in each engine:
+were settled in topple's engine and then settled, tilted and perturbed in each engine:
 
 | Engine | Critical tilt, mean difference (deg) | Spearman | Same fixed test outcome | Settled pose difference, median (mm) |
 | --- | --- | --- | --- | --- |
@@ -87,7 +94,7 @@ were settled in the developer's engine and then settled, tilted and perturbed in
 | Drake (SAP, hydroelastic between stones) | 1.4 | 0.90 | 9 of 12 | 0.2 |
 | PyBullet | 3.4 | 0.32 | 8 of 12 | 40 |
 
-Two towers that hold at 0.7 and 2.0 degrees in the developer's engine fall at zero tilt in both
+Two towers that hold at 0.7 and 2.0 degrees in topple's engine fall at zero tilt in both
 MuJoCo and Drake, so they lie at the edge of stability. PyBullet does not hold 9 of the 12 towers
 at zero tilt with its convex hull contact, so its row measures the engine setup more than the
 towers.
@@ -277,6 +284,85 @@ saved in `results/recalibration/calibrator.pkl`.
 
 ![Recalibration](recalibration/recalibration_reliability.png)
 
+### Predictions scored against MuJoCo and Drake
+
+`python scripts/run_engine_truth.py --exp E1all` and `--exp E2all` (replays in
+`results/engine_truth/<experiment>/`), then `python scripts/fig_engine_truth.py` (tables in
+`results/engine_truth/engine_truth.md`)
+
+Every placement of E1all and E2all (24 towers each) is rebuilt from its keyed random streams by
+`topple/validation/replay.py`: the same stones, friction, pile and perceived offsets, with each
+probe placed on a copy of the tower at its step and each building placement on the full tower.
+The tower is exported to MuJoCo and Drake, settled for 1 s, and given the same tilt test and fixed
+perturbation test. The stated predictions are then scored with each engine's outcome as the truth.
+In topple's engine the replay reproduces 25 of 25 E2all and 64 of 67 E1all building placements
+(largest critical tilt difference 3.4 degrees).
+
+| Experiment | Engine | Survival rate | Same outcome as topple | Critical tilt, mean difference (deg) | Spearman |
+| --- | --- | --- | --- | --- | --- |
+| E1all (246 placements) | topple | 0.34 |  |  |  |
+|  | MuJoCo | 0.25 | 0.84 | 2.37 | 0.79 |
+|  | Drake | 0.23 | 0.87 | 1.93 | 0.83 |
+| E2all (143 placements) | topple | 0.46 |  |  |  |
+|  | MuJoCo | 0.41 | 0.85 | 2.16 | 0.84 |
+|  | Drake | 0.38 | 0.90 | 1.77 | 0.86 |
+
+| Experiment | Prediction | Brier, topple | Brier, MuJoCo | Brier, Drake | ECE, topple | ECE, MuJoCo | ECE, Drake |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| E1all | tilt margin | 0.329 | 0.427 | 0.427 | 0.329 | 0.427 | 0.427 |
+| E1all | rocking margin | 0.195 | 0.260 | 0.236 | 0.195 | 0.260 | 0.236 |
+| E2all | point estimate | 0.441 | 0.441 | 0.462 | 0.441 | 0.441 | 0.462 |
+| E2all | unscented | 0.245 | 0.233 | 0.238 | 0.225 | 0.264 | 0.274 |
+| E2all | Monte Carlo | 0.209 | 0.166 | 0.171 | 0.156 | 0.121 | 0.113 |
+| E2all | rocking margin, Monte Carlo | 0.222 | 0.164 | 0.170 | 0.182 | 0.132 | 0.120 |
+| E2all | Monte Carlo with learned recalibration | 0.168 | 0.130 | 0.158 | 0.069 | 0.074 | 0.087 |
+
+With exact inputs the stated probability is 0 or 1, so Brier and ECE coincide for E1all. The
+bootstrap intervals are in `results/engine_truth/engine_truth.md`.
+
+MuJoCo and Drake agree with topple's engine on 84 to 90% of outcomes and are stricter: fewer
+placements survive in both. The methods rank in the same order in all three engines. Under
+perception, Monte Carlo scores better with MuJoCo or Drake as the truth (Brier 0.17) than with
+topple's engine (0.21), and the recalibrated Monte Carlo probability is the best calibrated in
+every engine (ECE 0.069 to 0.087). The recalibrator was trained on topple's outcomes from E4, E5
+and E6 only, so the MuJoCo and Drake columns test it on outcomes from engines it has not seen.
+With exact inputs both margins predict high compared with MuJoCo and Drake (bias +4.1 to +4.6
+degrees for the tilt margin, +0.9 to +1.4 for the rocking margin), and the rocking margin keeps
+the lower error (RMSE 3.8 to 4.2 degrees compared with 7.0). The calibration results therefore
+hold with MuJoCo and Drake outcomes as the truth.
+
+### E2grow: perception with a looser chance constraint
+
+`python scripts/run_experiment.py --condition E2grow --profile study --towers 24 --delta 0.3`,
+then `python scripts/fig_e2grow.py` (tables in `results/e2grow/e2grow.md`)
+
+E2grow repeats E2all (perceived stones, Monte Carlo propagation, the same stones per tower index)
+with the chance constraint p_hat >= 1 - delta at delta = 0.3 in place of 0.05, so that towers grow
+under perception. The recalibration is trained on E4, E5 (off centre) and E6, with tower indices
+held out.
+
+| Experiment | Stones per tower (mean, max) | Height in cm (mean, max) | Collapses | Placements | Stacked placements |
+| --- | --- | --- | --- | --- | --- |
+| E2all, delta 0.05 | 1.04, 2 | 6.5, 12.5 | 0 | 143 | 71 |
+| E2grow, delta 0.3 | 1.62, 3 | 10.2, 21.1 | 0 | 179 | 107 |
+
+| Placements | Experiment | Survival rate | Monte Carlo: mean p, Brier, ECE | Recalibrated: Brier, ECE | Point estimate ECE |
+| --- | --- | --- | --- | --- | --- |
+| all | E2all | 0.46 | 0.45, 0.209, 0.156 | 0.168, 0.069 | 0.441 |
+| all | E2grow | 0.39 | 0.40, 0.188, 0.103 | 0.163, 0.054 | 0.425 |
+| on the ground | E2all | 0.56 | 0.67, 0.174, 0.141 | 0.129, 0.084 | 0.375 |
+| on the ground | E2grow | 0.54 | 0.65, 0.175, 0.134 | 0.133, 0.092 | 0.389 |
+| stacked | E2all | 0.37 | 0.22, 0.245, 0.190 | 0.207, 0.090 | 0.507 |
+| stacked | E2grow | 0.28 | 0.22, 0.196, 0.101 | 0.183, 0.056 | 0.449 |
+
+The looser constraint lets the towers grow by about half (1.6 stones and 10.2 cm on average, up to
+3 stones and 21 cm) with no collapses. On the 107 stacked placements Monte Carlo has ECE 0.10 and
+Brier 0.20, and the recalibrated probability has ECE 0.056. The E2grow and E2all intervals overlap
+(stacked Monte Carlo ECE 0.074 to 0.218 compared with 0.134 to 0.315): calibration holds on the
+taller towers, and separating the two experiments would need more towers. The
+point estimate stays overconfident (ECE 0.43 to 0.45). Under perception, the rocking margin with
+Monte Carlo gives ECE 0.165 compared with 0.103 for the tilt margin.
+
 ### E3: sources of margin variance (hypothesis H4)
 
 `python scripts/fig_sobol.py --profile study --towers 4 --n 256 --max-stones 3`
@@ -383,7 +469,7 @@ planning on irregular stones next to a tower is the step that most often fails.
 | --- | --- |
 | H1: with exact inputs the static tilt margin matches the critical tilt to the cone discretisation error | Not supported. Single stones: bias +3.6 degrees, Spearman 0.83. The bias grows with a finer cone, so the gap between feasibility and stability dominates. The rocking margin reduces the bias to -0.6 degrees. |
 | H2: a point estimate is overconfident | Supported (ECE 0.44, predictions at 0 or 1). |
-| H3: Monte Carlo is calibrated to ECE 0.05 and first order fails near zero margin | Monte Carlo alone is the best calibrated propagation method (ECE 0.16) and misses 0.05; first order is worse (0.22). With learned recalibration from other experiments the ECE over all groups is 0.048 (interval 0.037 to 0.076). |
+| H3: Monte Carlo is calibrated to ECE 0.05 and first order fails near zero margin | Monte Carlo alone is the best calibrated propagation method (ECE 0.16) and misses 0.05; first order is worse (0.22). With learned recalibration from other experiments the ECE over all groups is 0.048 (interval 0.037 to 0.076), and on E2all it is 0.074 and 0.087 with MuJoCo and Drake outcomes as the truth. |
 | H4: underside geometry dominates for flat stones, friction for blocky stones | Not supported as stated. Surface shape dominates for every class; the underside matters most for blocky stones; friction contributes little. |
 | H5: a lower confidence bound objective reduces collapses at a small height cost | Inconclusive at 24 towers per value (0 to 2 collapses per value). |
 
@@ -400,10 +486,11 @@ is written by `scripts/export_viewer.py` to `results/viewer/tower_viewer.html`.
 
 - The experiments run at study scale (24 towers per condition), so the confidence bands in the
   reliability diagrams are wide.
-- The outcomes come from the developer's engine. MuJoCo and Drake agree on settled towers, and
-  scoring the calibration against their outcomes is a natural next step.
-- Towers under perception stop at one stone with delta = 0.05; tower growth under uncertainty is
-  studied in E4 with delta = 0.3.
+- The main outcomes come from topple's engine. MuJoCo and Drake replays of E1all and E2all give
+  the same calibration results, and fewer placements survive in both, so absolute survival rates
+  depend on the engine.
+- Towers under perception stop at about one stone with delta = 0.05. With delta = 0.3 (E2grow
+  and E4) they reach 1.6 stones on average and 3 at most.
 - The dynamic failure rule (5 mm or 2 degrees) and the static contact band (0.5 mm) interact, and
   the E1 bias depends on both.
 - E1, E2, E5 and E6 use the oracle lowering. In E4 a third of the placements fall back to it.

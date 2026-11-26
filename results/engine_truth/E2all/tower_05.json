@@ -1,0 +1,285 @@
+{
+ "exp": "E2all_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_d0.05_clsall_2d873fc8f91392c5",
+ "tower": 5,
+ "engines": [
+  "mujoco",
+  "drake"
+ ],
+ "seconds": 1208.0673825740814,
+ "rows": [
+  {
+   "tower": 5,
+   "placement": 0,
+   "stone": "flat_river_007",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 1.0,
+    "m_true": 16.025000000000208,
+    "collapsed": false,
+    "p_hat": 0.828125,
+    "m_hat": 10.433082580566406
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 15.590000000000234,
+     "fixed": 1.0,
+     "settle_shift_m": 5.896178848660651e-05,
+     "seconds": 0.3063036249950528
+    },
+    "drake": {
+     "tilt": 14.199999999999974,
+     "fixed": 1.0,
+     "settle_shift_m": 3.0233313293617974e-05,
+     "seconds": 14.808823041035794
+    }
+   },
+   "seconds": 15.261911083944142
+  },
+  {
+   "tower": 5,
+   "placement": 0,
+   "stone": "rounded_cobble_001",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 2.7699999999999694,
+    "collapsed": false,
+    "p_hat": 0.5,
+    "m_hat": 3.012115478515625
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 2.65999999999997,
+     "fixed": 0.0,
+     "settle_shift_m": 6.403849411821765e-05,
+     "seconds": 0.1940496660536155
+    },
+    "drake": {
+     "tilt": 2.7099999999999707,
+     "fixed": 0.0,
+     "settle_shift_m": 3.429849198814052e-05,
+     "seconds": 9.551280250074342
+    }
+   },
+   "seconds": 10.232961750007235
+  },
+  {
+   "tower": 5,
+   "placement": 0,
+   "stone": "blocky_quarry_008",
+   "probe": false,
+   "tag": null,
+   "recorded": {
+    "y": 1.0,
+    "m_true": 17.554999999999733,
+    "collapsed": false,
+    "p_hat": 0.90625,
+    "m_hat": 18.025840759277344
+   },
+   "replay_collapsed": false,
+   "topple_replay": {
+    "tilt": 17.554999999999733,
+    "fixed": 1.0
+   },
+   "engines": {
+    "mujoco": {
+     "tilt": 16.489999999999945,
+     "fixed": 1.0,
+     "settle_shift_m": 5.9923318260087604e-05,
+     "seconds": 0.35479137499351054
+    },
+    "drake": {
+     "tilt": 17.424999999999738,
+     "fixed": 1.0,
+     "settle_shift_m": 8.159789251344973e-05,
+     "seconds": 14.31760450010188
+    }
+   },
+   "seconds": 26.2754319999367
+  },
+  {
+   "tower": 5,
+   "placement": 1,
+   "stone": "flat_river_004",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 3.059999999999957,
+    "collapsed": false,
+    "p_hat": 0.59375,
+    "m_hat": 7.765907287597656
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 1.8949999999999898,
+     "fixed": 0.0,
+     "settle_shift_m": 0.00021307995255039443,
+     "seconds": 0.525178833049722
+    },
+    "drake": {
+     "tilt": 3.0049999999999715,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0002510022240960128,
+     "seconds": 224.96974383294582
+    }
+   },
+   "seconds": 226.48633437498938
+  },
+  {
+   "tower": 5,
+   "placement": 1,
+   "stone": "flat_river_002",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 1.264999999999995,
+    "collapsed": false,
+    "p_hat": 0.4375,
+    "m_hat": 6.3922576904296875
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 1.0300000000000014,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0003722441143388767,
+     "seconds": 0.9766906250733882
+    },
+    "drake": {
+     "tilt": 5.464999999999953,
+     "fixed": 1.0,
+     "settle_shift_m": 0.00032567102627080084,
+     "seconds": 348.73032400000375
+    }
+   },
+   "seconds": 351.13592808297835
+  },
+  {
+   "tower": 5,
+   "placement": 1,
+   "stone": "flat_river_004",
+   "probe": false,
+   "tag": null,
+   "recorded": {
+    "y": 0.0,
+    "m_true": 1.6099999999999994,
+    "collapsed": false,
+    "p_hat": 0.71875,
+    "m_hat": 7.014915466308594
+   },
+   "replay_collapsed": false,
+   "topple_replay": {
+    "tilt": 1.9299999999999824,
+    "fixed": 0.0
+   },
+   "engines": {
+    "mujoco": {
+     "tilt": 1.2099999999999977,
+     "fixed": 0.0,
+     "settle_shift_m": 0.00013175595232003143,
+     "seconds": 0.6467403339920565
+    },
+    "drake": {
+     "tilt": 5.049999999999916,
+     "fixed": 0.0,
+     "settle_shift_m": 0.00011170667696414853,
+     "seconds": 261.5785695830127
+    }
+   },
+   "seconds": 314.28723204205744
+  },
+  {
+   "tower": 5,
+   "placement": 2,
+   "stone": "flat_river_002",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 0.0,
+    "collapsed": true,
+    "p_hat": 0.1875,
+    "m_hat": 1.3756866455078125
+   },
+   "replay_collapsed": true,
+   "engines": {
+    "mujoco": {
+     "tilt": 0.0,
+     "fixed": 0.0,
+     "collapsed": true
+    },
+    "drake": {
+     "tilt": 0.0,
+     "fixed": 0.0,
+     "collapsed": true
+    }
+   },
+   "seconds": 12.070953499991447
+  },
+  {
+   "tower": 5,
+   "placement": 2,
+   "stone": "flat_river_002",
+   "probe": true,
+   "tag": "probe",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 8.300000000000024,
+    "collapsed": false,
+    "p_hat": 0.015625,
+    "m_hat": 0.21117401123046875
+   },
+   "replay_collapsed": false,
+   "engines": {
+    "mujoco": {
+     "tilt": 2.084999999999979,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0002681237418695273,
+     "seconds": 1.019061499973759
+    },
+    "drake": {
+     "tilt": 1.244999999999997,
+     "fixed": 0.0,
+     "settle_shift_m": 0.0003581291825620879,
+     "seconds": 99.89181079203263
+    }
+   },
+   "seconds": 114.08890141698066
+  },
+  {
+   "tower": 5,
+   "placement": 2,
+   "stone": "rounded_cobble_001",
+   "probe": true,
+   "tag": "final_infeasible",
+   "recorded": {
+    "y": 0.0,
+    "m_true": 0.0,
+    "collapsed": true,
+    "p_hat": 0.0,
+    "m_hat": 0.01018524169921875
+   },
+   "replay_collapsed": true,
+   "engines": {
+    "mujoco": {
+     "tilt": 0.0,
+     "fixed": 0.0,
+     "collapsed": true
+    },
+    "drake": {
+     "tilt": 0.0,
+     "fixed": 0.0,
+     "collapsed": true
+    }
+   },
+   "seconds": 9.68036491703242
+  }
+ ]
+}

@@ -156,14 +156,16 @@ class Scene:
             object_id = self._next_object_id
             self._next_object_id += 1
         inst = Instance(mesh, material, SE3() if T0 is None else T0, T1, object_id, False, vertex_colors, name)
-        self.instances.append(inst)
+        if len(mesh.faces):  # an empty mesh (e.g. a stone wholly on the cut side of a section) adds nothing
+            self.instances.append(inst)
         return inst
 
     def add_overlay(self, mesh: TriMesh, color=(1.0, 1.0, 1.0), alpha: float = 1.0, blend: str = "over", glass: bool = False, vertex_colors=None, outline: float = 0.25, T0: SE3 | None = None, T1: SE3 | None = None, name: str = "overlay") -> Instance:
         """Overlay geometry: unlit emissive, composited alpha over (or additively) in a second pass."""
         mat = Material(name=name, emission=tuple(np.asarray(color, dtype=np.float64)[:3]), alpha=alpha, blend=1 if blend == "add" else 0, unlit=not glass, glass_shell=glass, outline=outline, use_vertex_colors=vertex_colors is not None)
         inst = Instance(mesh, mat, SE3() if T0 is None else T0, T1, 0, True, vertex_colors, name)
-        self.overlays.append(inst)
+        if len(mesh.faces):
+            self.overlays.append(inst)
         return inst
 
     def add_light(self, light) -> None:

@@ -6,6 +6,22 @@ margin with an uncertainty distribution and a probability that the tower survive
 protocol. The simulator then measures the true margin and the outcome, and the agreement
 between prediction and measurement (calibration) is the primary result.
 
+> **Status, 26 November 2026.** The full system is built and tested, and the study scale
+> experiments, the checks in other physics engines and the renders are complete.
+>
+> **What the results show so far**
+>
+> - The predictions can be made well calibrated. The final method (Monte Carlo sampling plus a
+>   learned correction) is, on average, within about 5 percentage points of the observed survival
+>   rate on experiments it was not trained on (calibration error 0.048, target 0.05).
+> - This holds when the outcomes come from two independent physics engines, MuJoCo and Drake.
+> - Accounting for uncertainty matters: a single best guess of each stone's shape is overconfident
+>   (calibration error 0.44).
+> - Towers built from scanned stones are short: 1 to 1.6 stones on average and 3 at most.
+>
+> **Next:** planning with the corrected probability and a looser risk limit, to build taller
+> towers.
+
 Every module is written for this project: stone generator, rigid body solver, static
 stability analyser, simulated depth sensor and estimator, planner, arm controller, path tracer
 and evaluator. The rigid body solver is cross checked against MuJoCo, Drake and PyBullet.

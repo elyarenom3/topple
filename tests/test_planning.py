@@ -272,3 +272,34 @@ def test_planner_chooses_a_feasible_placement():
     assert abs(V[:, 2].min() - 0.04) < 2e-3
     tower = build_static_tower(state, stone.transformed(decision.pose), 0.25, None, 0.6)
     assert tower.n_contacts >= 3
+
+
+def test_planner_chance_constraint_uses_the_recalibrated_probability():
+    from topple.statics import tilt_margin
+
+    base = box((0.12, 0.10, 0.04), center=(0, 0, 0.02))
+    state = TowerState([PlacedStone("base", base, 1.2, base.centroid(), 0.6)])
+    stone = icosphere(2, 0.03).scaled([1.2, 1.0, 0.6])
+
+    class Est:
+        mean_mesh = stone
+        mass = 0.25
+        mu = 0.6
+
+    class FixedRecalibrator:
+        seen = []
+
+        def predict(self, records):
+            self.seen.extend(records)
+            return np.full(len(records), 0.2)
+
+    planner = Planner({"planner": {"n_candidates": 3, "refine_iters": 3, "kappa": 1.0, "delta": 0.05}}, rng=np.random.default_rng(0))
+    planner.recalibrator = FixedRecalibrator()
+    planner.recal_context = {"classes": ["flat_river"], "settings": {"delta": 0.05}}
+    margin_fn = lambda tower, cand: np.array([tilt_margin(tower, n_azimuth=8)[0] + d for d in (-0.5, 0.0, 0.5)])
+    decision = planner.choose(state, [Est()], margin_fn)
+    assert decision is not None
+    assert decision.p_hat == 0.2 and decision.p_raw > 0.5
+    assert not decision.feasible  # 0.2 misses p >= 0.95 although the raw probability passes
+    rec = FixedRecalibrator.seen[0]
+    assert rec["placement"] == 1 and rec["meta"]["stone_class"] == "flat_river" and rec["meta"]["n_contacts"] >= 1

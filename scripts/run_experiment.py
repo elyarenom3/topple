@@ -46,6 +46,8 @@ CONDITIONS = {
     "E2all": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none", "unscented", "first_order"], "eval_simulation": True, "eval_margins": ["rocking"]}),
     # E2 with a looser chance constraint (run with --delta 0.3) so that towers grow under perception
     "E2grow": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none"], "eval_margins": ["rocking"]}),
+    # E2 planning with the learned recalibration in the chance constraint (run with --delta 0.5)
+    "E2plan": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none"], "eval_margins": ["rocking"], "recalibrate_planner": True}),
     "E2ut": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["unscented"]}),
     "E1": dict(oracle=True, propagation="none", margin="tilt"),
     "E1_push": dict(oracle=True, propagation="none", margin="push"),

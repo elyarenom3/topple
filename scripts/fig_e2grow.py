@@ -1,4 +1,6 @@
-"""E2 with a looser chance constraint (delta 0.3, condition E2grow) compared with E2all (delta 0.05).
+"""E2 with a looser chance constraint (delta 0.3, condition E2grow) and with the learned
+recalibration in the planner's chance constraint (delta 0.5, condition E2plan, when present),
+compared with E2all (delta 0.05).
 
 Reports how far the towers grow and the calibration of each stated survival probability, on all
 placements and split by level (on the ground, placement 0; stacked, placement 1 or higher).
@@ -21,12 +23,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from topple.eval.metrics import expected_calibration_error  # noqa: E402
-from topple.eval.recalibration import leave_tower_out, settings_from_name  # noqa: E402
+from topple.eval.recalibration import leave_tower_out, settings_from_name, training_records  # noqa: E402
 
 EXP = ROOT / "results" / "experiments"
 OUT = ROOT / "results" / "e2grow"
 N_BOOT = 1000
-SKIP_TRAIN = ("E1all", "E2all", "E2grow", "E5_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_")
+SKIP_TRAIN = ("E1all", "E2all", "E2grow", "E2plan", "E5_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_")
 
 
 def load(prefix: str):
@@ -51,11 +53,14 @@ def train_set():
     return out
 
 
-def predictions(recs, train):
+def predictions(recs, train, exp):
     P = {"Monte Carlo": np.array([r["p_hat"] for r in recs])}
     for k, name in (("method:none", "point estimate"), ("margin:rocking", "rocking margin, Monte Carlo")):
         P[name] = np.array([r["meta"]["preds"][k]["p_hat"] for r in recs])
     P["Monte Carlo with learned recalibration"] = leave_tower_out(recs, train, "boosted", context=True)
+    if exp == "E2plan":
+        # the recalibrator the planner used: earlier perception experiments, this tower index held out
+        P["recalibration used by the planner"] = leave_tower_out(recs, training_records(EXP), "boosted", context=True)
     return P
 
 
@@ -92,12 +97,13 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     train = train_set()
     res = {}
-    for exp in ("E2all", "E2grow"):
+    exps = [e for e in ("E2all", "E2grow", "E2plan") if glob.glob(str(EXP / f"{e}_*" / "records.json"))]
+    for exp in exps:
         recs = load(exp)
         y = np.array([r["y"] for r in recs], dtype=float)
         towers = np.array([r["tower"] for r in recs])
         level = np.array([r["placement"] for r in recs])
-        P = predictions(recs, train)
+        P = predictions(recs, train, exp)
         res[exp] = {"growth": growth(recs), "scores": {}}
         for split, m in (("all", level >= 0), ("ground", level == 0), ("stacked", level >= 1)):
             res[exp]["scores"][split] = {k: score(p[m], y[m], towers[m], np.random.default_rng(0)) for k, p in P.items()}
@@ -107,7 +113,7 @@ def main():
         return f"{v[k]:.3f} [{v[k + '_ci'][0]:.3f}, {v[k + '_ci'][1]:.3f}]"
 
     L = ["# E2 with a looser chance constraint", "",
-         "Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3; both use the perceived stones and the same stones per tower index. Intervals: 95% bootstrap over towers.", "",
+         "Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05, E2grow delta 0.3, and E2plan delta 0.5 with the learned recalibration in the chance constraint; all use the perceived stones and the same stones per tower index. Intervals: 95% bootstrap over towers.", "",
          "| Experiment | Towers | Stones per tower (mean, max) | Height cm (mean, max) | Collapse rate | Placements | Stacked placements |",
          "| --- | --- | --- | --- | --- | --- | --- |"]
     for exp, v in res.items():

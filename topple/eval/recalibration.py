@@ -95,6 +95,37 @@ class Recalibrator:
         return r
 
 
+TRAIN_PREFIXES = ("E2all", "E2grow", "E4", "E5", "E6")
+
+
+def training_records(exp_dir, prefixes=TRAIN_PREFIXES, exclude_tower: int | None = None) -> list[dict]:
+    """Labelled records of earlier experiments (perceived stones) for fitting a recalibrator,
+    with their settings; ``exclude_tower`` drops every record of that tower index, since
+    experiments share stones by tower index."""
+    import glob
+    import json
+
+    out = []
+    for pre in prefixes:
+        for p in sorted(glob.glob(str(Path(exp_dir) / f"{pre}_*" / "records.json"))):
+            name = Path(p).parent.name
+            s = settings_from_name(name)
+            for r in json.load(open(p)):
+                if exclude_tower is not None and r["tower"] == exclude_tower:
+                    continue
+                r["settings"] = s
+                out.append(r)
+    return out
+
+
+def candidate_record(p_hat: float, samples, level: int, height: float, n_contacts: int, stone_class, settings: dict) -> dict:
+    """A record in the experiment format for one screened candidate, for ``Recalibrator.predict``."""
+    smp = np.asarray(samples, dtype=float).reshape(-1)
+    lo, hi = (np.quantile(smp, [0.025, 0.975]) if smp.size else (np.nan, np.nan))
+    return {"p_hat": float(p_hat), "m_hat": float(smp.mean()) if smp.size else np.nan, "m_lo": float(lo), "m_hi": float(hi), "samples": smp,
+            "placement": int(level), "height": float(height), "meta": {"n_contacts": int(n_contacts), "stone_class": stone_class or ""}, "settings": dict(settings)}
+
+
 def leave_tower_out(test_records, train_records, kind: str = "boosted", context: bool = True) -> np.ndarray:
     """Predictions for ``test_records`` where the model for tower t is trained on
     ``train_records`` without any record of tower index t (experiments share stones by tower)."""

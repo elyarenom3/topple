@@ -67,6 +67,7 @@ class CandidatePlacement:
     J: float = -np.inf
     dh: float = 0.0
     feasible: bool = False
+    p_raw: float = float("nan")  # Monte Carlo probability before recalibration (when used)
 
 
 @dataclass
@@ -80,6 +81,7 @@ class Decision:
     candidates: list
     tower: Tower | None = None
     feasible: bool = True  # False when no candidate met the chance constraint (best effort choice)
+    p_raw: float = float("nan")  # screening probability before recalibration (when used)
 
 
 def _estimate_fields(est):
@@ -139,6 +141,11 @@ class Planner:
         self.require_feasible = bool(pc.get("require_feasible", False))
         self.keep_pile_orientation = bool(pc.get("keep_pile_orientation", False))
         self.settler = None  # optional SupportWorld for dynamic settling (Section 9.1)
+        # optional learned recalibration of the survival probability used in the chance constraint:
+        # a fitted eval.recalibration.Recalibrator, and the context it needs (stone classes of the
+        # pile in candidate order, experiment settings)
+        self.recalibrator = None
+        self.recal_context: dict = {}
         self._support_world = None
 
     # ------------------------------------------------------------------ pieces
@@ -175,9 +182,21 @@ class Planner:
             cand.p_hat = float(norm.sf((self.tau_deg - float(np.mean(samples))) / max(sd, 1e-6)))
         else:
             cand.p_hat = survival_probability(samples, self.tau_deg)
+        if self.recalibrator is not None:
+            cand.p_raw = cand.p_hat
+            cand.p_hat = self._recalibrated(state, cand, samples)
         cand.feasible = settled.stable and chance_ok(cand.p_hat, self.delta)
         cand.J = objective(samples, cand.dh, self.kappa, self.lambda_h)
         return cand
+
+    def _recalibrated(self, state: TowerState, cand: CandidatePlacement, samples) -> float:
+        from ..eval.recalibration import candidate_record
+
+        classes = self.recal_context.get("classes") or []
+        cls = classes[cand.stone_index] if 0 <= cand.stone_index < len(classes) else None
+        nc = cand.tower.n_contacts if cand.tower is not None else 0
+        rec = candidate_record(cand.p_hat, samples, len(state.stones), state.top_height() + cand.dh, nc, cls, self.recal_context.get("settings", {}))
+        return float(self.recalibrator.predict([rec])[0])
 
     def refine(self, state: TowerState, est, cand: CandidatePlacement, margin_fn) -> CandidatePlacement:
         """Refine (x, y, yaw) of the best candidate with the configured optimiser."""
@@ -311,4 +330,4 @@ class Planner:
         grasp = self.plan_grasp(pile_estimates[best.stone_index], tower_estimate, best) if with_grasp else None
         if refine and feasible:
             feasible = bool(best.feasible)
-        return Decision(best.stone_index, best.pose, grasp, best.margin_samples, best.p_hat, best.J, all_candidates, best.tower, feasible)
+        return Decision(best.stone_index, best.pose, grasp, best.margin_samples, best.p_hat, best.J, all_candidates, best.tower, feasible, best.p_raw)

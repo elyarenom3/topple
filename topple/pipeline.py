@@ -18,6 +18,7 @@ estimated frame and its true body frame is known to the harness only.
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from dataclasses import dataclass, field, asdict
 
 import numpy as np
@@ -153,6 +154,14 @@ class Experiment:
 
             planner.settler = SupportWorld(cfg, ground_mu=float(get(cfg, "friction.prior_median", 0.6)))
         model = MarginModel(cfg, cond, make_rng(self.seed, t, Stage.ESTIMATOR))
+        if cond.extra.get("recalibrate_planner"):
+            # the chance constraint uses the learned recalibration, fitted on earlier experiments
+            # without this tower index (experiments share stones by tower index)
+            from .eval.recalibration import Recalibrator, training_records
+
+            exp_dir = cond.extra.get("recalibration_data", str(Path(__file__).resolve().parents[1] / "results" / "experiments"))
+            planner.recalibrator = Recalibrator("boosted", context=True).fit(training_records(exp_dir, exclude_tower=t))
+            planner.recal_context["settings"] = {"kappa": cond.kappa, "noise_scale": cond.noise_scale, "friction_log_sigma": cond.friction_log_sigma, "delta": planner.delta}
         screen_samples = int(get(cfg, "planner.screen_samples", 8))
         screen_azimuth = int(get(cfg, "planner.screen_azimuths", 12))
         placed: list[dict] = []  # dicts: estimate, pose (SE3, observed), body_id, height, stone_index
@@ -169,6 +178,7 @@ class Experiment:
                 break
             t0 = time.perf_counter()
             pile = [estimates[i] for i in available]
+            planner.recal_context["classes"] = [bodies[i].meta.get("stone_class") for i in available]
 
             def margin_fn(tower, cand, _pile=pile):
                 # coarse evaluation for screening: few samples and azimuths (a point estimate when the
@@ -245,7 +255,7 @@ class Experiment:
                 ms_decision=ms,
                 shake_true=outcomes["shake"].value if "shake" in outcomes else float("nan"),
                 push_true=outcomes["push"].value if "push" in outcomes else float("nan"),
-                meta={"J": decision.J, "kappa": cond.kappa, "pose": decision.pose.matrix().tolist(), "n_candidates": len(decision.candidates), "n_contacts": final.n_contacts, "screen_p_hat": decision.p_hat, "arm_fallback": body.meta.get("arm_fallback"), "probe": False, "feasible": decision.feasible, "release": body.meta.get("release_check"), "tilt_per_azimuth": outcomes["tilt"].per_direction if "tilt" in outcomes else None, "preds": preds, "stone_class": body.meta.get("stone_class")},
+                meta={"J": decision.J, "kappa": cond.kappa, "pose": decision.pose.matrix().tolist(), "n_candidates": len(decision.candidates), "n_contacts": final.n_contacts, "screen_p_hat": decision.p_hat, "screen_p_raw": decision.p_raw, "arm_fallback": body.meta.get("arm_fallback"), "probe": False, "feasible": decision.feasible, "release": body.meta.get("release_check"), "tilt_per_azimuth": outcomes["tilt"].per_direction if "tilt" in outcomes else None, "preds": preds, "stone_class": body.meta.get("stone_class")},
             )
             records.append(rec)
             self.log(f"  placement {k}: {body.name} m_hat {rec.m_hat:.1f} [{rec.m_lo:.1f}, {rec.m_hi:.1f}] p_hat {rec.p_hat:.2f} | m_true {m_true:.1f} y {y:.0f} | {ms:.0f} ms")

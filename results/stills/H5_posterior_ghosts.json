@@ -1,11 +1,11 @@
 {
  "name": "H5_posterior_ghosts",
- "width": 720,
- "height": 480,
- "spp": 64,
- "seconds": 1487.6497259140015,
- "rays": 92337200,
- "rays_per_s": 62108.60637842232,
+ "width": 1920,
+ "height": 1280,
+ "spp": 128,
+ "seconds": 4240.672438144684,
+ "rays": 1308299683,
+ "rays_per_s": 308574.834486147,
  "focal_mm": 85,
  "f_number": 5.6,
  "dof": [
@@ -13,5 +13,8 @@
   0.34715581149517644,
   0.3514404347749742
  ],
- "exposure": 1.4180093320792582
+ "exposure": 1.4167567694683831,
+ "spectral": false,
+ "mnee": false,
+ "lens": "thin"
 }

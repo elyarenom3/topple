@@ -1,11 +1,11 @@
 {
  "name": "H4_field_of_candidates",
- "width": 720,
- "height": 480,
- "spp": 64,
- "seconds": 169.7849841117859,
- "rays": 90838714,
- "rays_per_s": 539609.6041411724,
+ "width": 1920,
+ "height": 1280,
+ "spp": 512,
+ "seconds": 850.8402984142303,
+ "rays": 5110332646,
+ "rays_per_s": 6010530.4894382125,
  "focal_mm": 50.0,
  "f_number": 8.0,
  "dof": [
@@ -13,5 +13,8 @@
   2.3403726708074535,
   4.177383592017738
  ],
- "exposure": 1.9974589356271708
+ "exposure": 1.9991882076551366,
+ "spectral": false,
+ "mnee": false,
+ "lens": "thin"
 }

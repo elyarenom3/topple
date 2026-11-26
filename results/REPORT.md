@@ -8,8 +8,8 @@ report are kept in `results/archive_v1/`.
 
 ## Summary
 
-1. All eight modules are implemented and tested (137 test functions; in the fast suite 148
-   cases pass and 2 are skipped, the PyBullet cases, which run in a separate Python 3.11
+1. All eight modules are implemented and tested (138 test functions; in the full suite 151
+   cases pass and 2 are skipped, the PyBullet cases, which pass in a separate Python 3.11
    environment).
 2. With exact inputs, the static tilt margin ranks the dynamic critical tilt well for single
    stones (Spearman 0.83) and predicts high by about 3 degrees. The new rocking aware margin
@@ -495,8 +495,8 @@ CPU path tracer; the settings of each still are in the JSON file next to it.
 | H8 stability landscape | objective over the tower top | thin lens | 21 |
 | H9 long exposure shake | trajectories of the shake test | thin lens | 21 |
 | H10 triptych | beauty, section, density tint | thin lens | 16 |
-| H11 hundred towers | one tile per E2all tower, tinted by outcome | orthographic | 17 |
-| H12 tilt strip | five frames of the tilt test | thin lens | 10 |
+| H11 hundred towers | one tile per E2all tower, tinted by outcome | orthographic | 18 |
+| H12 tilt strip | five frames of the tilt test | thin lens | 38 (about 2 per frame; one frame ran under other load) |
 
 The videos are 960 x 540 at 24 frames per second: V1 build (396 frames), V2 scan (108), V3 tilt
 test (24), V4 collapse in slow motion with modal impact sound (144), V5 shake table (144), V6

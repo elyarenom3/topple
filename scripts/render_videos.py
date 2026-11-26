@@ -326,8 +326,8 @@ def V6(args):
                 sc.add(mw, Material(name="tile", base_color=col, roughness=0.6))
         span = k * pitch + 0.2
         zoom = 1.0 - 0.25 * float(min_jerk(np.array([u]))[0])
-        # orthographic, so the height only sets what lies between: below the key softbox (1.06 m)
-        cam = Camera(position=np.array([0, 0, 0.8]), look_at=np.zeros(3), up=np.array([0, 1.0, 0]), ortho=True, ortho_width=span * zoom * w / h, width=w, height=h)
+        # orthographic, so the height only sets what lies between: below the lower edge of the key softbox (0.71 m)
+        cam = Camera(position=np.array([0, 0, 0.5]), look_at=np.zeros(3), up=np.array([0, 1.0, 0]), ortho=True, ortho_width=span * zoom * w / h, width=w, height=h)
         if writer is None:
             # meter on the ground between tiles (a tile sits at the origin when the grid side is odd)
             exposure = key_light_exposure(sc, np.array([0.5 * pitch, 0.5 * pitch, 0.001]), [0, 0, 1])

@@ -495,7 +495,7 @@ CPU path tracer; the settings of each still are in the JSON file next to it.
 | H8 stability landscape | objective over the tower top | thin lens | 21 |
 | H9 long exposure shake | trajectories of the shake test | thin lens | 21 |
 | H10 triptych | beauty, section, density tint | thin lens | 16 |
-| H11 hundred towers | one tile per E2all tower, tinted by outcome | orthographic | 18 |
+| H11 hundred towers | one tile per E2all tower, tinted by outcome | orthographic | 41 (ran alongside other work) |
 | H12 tilt strip | five frames of the tilt test | thin lens | 38 (about 2 per frame; one frame ran under other load) |
 
 The videos are 960 x 540 at 24 frames per second: V1 build (396 frames), V2 scan (108), V3 tilt

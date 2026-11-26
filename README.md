@@ -17,10 +17,14 @@ between prediction and measurement (calibration) is the primary result.
 > - This holds when the outcomes come from two independent physics engines, MuJoCo and Drake.
 > - Accounting for uncertainty matters: a single best guess of each stone's shape is overconfident
 >   (calibration error 0.44).
-> - Towers built from scanned stones are short: 1 to 1.6 stones on average and 3 at most.
+> - Towers built from scanned stones are short: 1 to 1.7 stones on average and 3 at most.
+> - Planning with the corrected probability and a looser risk limit gives towers of the same
+>   height, and more of the stacked stones stay up (10 of 16 compared with 7 of 15). In 23 of 24
+>   towers no candidate for the next stone reached a 50% survival probability, so height is set
+>   by the stones and poses on offer.
 >
-> **Next:** planning with the corrected probability and a looser risk limit, to build taller
-> towers.
+> **Possible next step:** more stones and candidate poses per placement, or sharper perception,
+> to build taller towers.
 
 Every module is written for this project: stone generator, rigid body solver, static
 stability analyser, simulated depth sensor and estimator, planner, arm controller, path tracer
@@ -40,6 +44,7 @@ with every table and the command that produced it, is in [results/REPORT.md](res
 | Final method: Monte Carlo with a learned recalibration step | Trained on other experiments and tested on held out ones (1,607 placements): Brier from 0.236 to 0.175, ECE from 0.165 to 0.048, AUC from 0.72 to 0.82. |
 | Do the results hold in independent engines? | Every E1all and E2all placement was replayed in MuJoCo and Drake. Both agree with topple's outcome on 84 to 90% of placements, the methods rank the same way, and the recalibrated probability is the best calibrated in every engine (ECE 0.069 to 0.087). |
 | Can towers grow under perception and stay calibrated? (E2grow) | With the chance constraint at delta 0.3, towers grow from 1.0 to 1.6 stones on average (up to 3 stones and 21 cm) with no collapses. On stacked placements the ECE is 0.10, and 0.056 after recalibration. |
+| Does planning with the recalibrated probability build taller towers? (E2plan) | At delta 0.5 the towers reach the same height (1.7 stones, 9.6 cm on average), with one collapse. More stacked stones survive (10 of 16 compared with 7 of 15), and the probability the planner used is well calibrated (ECE 0.067). |
 | What drives the margin uncertainty? (E3) | Surface shape, for every stone class; the underside matters most for blocky stones. |
 | Is the renderer correct? | It matches Mitsuba 3 on a shared scene (mean FLIP 0.003). |
 
@@ -156,6 +161,7 @@ Figures and renders, one command each:
 | Monte Carlo with learned recalibration | `python scripts/fig_recalibration.py` |
 | replay in MuJoCo and Drake | `python scripts/run_engine_truth.py --exp E1all` (and `--exp E2all`), then `python scripts/fig_engine_truth.py` |
 | E2grow (delta 0.3) | `python scripts/run_experiment.py --condition E2grow --profile study --towers 24 --delta 0.3`, then `python scripts/fig_e2grow.py` |
+| E2plan (recalibrated planner, delta 0.5) | `python scripts/run_experiment.py --condition E2plan --profile study --towers 24 --delta 0.5`, then `python scripts/fig_e2grow.py` |
 
 `python scripts/make_all.py --profile quick` runs everything at smoke scale.
 

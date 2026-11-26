@@ -20,7 +20,9 @@ report are kept in `results/archive_v1/`.
    which supports H2. The 0.05 target of H3 is not reached. With a looser chance constraint (delta 0.3,
    E2grow) towers under perception grow from 1.0 to 1.6 stones (6.5 to 10.2 cm) with no
    collapses, and Monte Carlo stays calibrated on the stacked placements (ECE 0.10; 0.056 after
-   recalibration).
+   recalibration). Planning with the recalibrated probability at delta 0.5 (E2plan) gives the
+   same growth (1.7 stones, 9.6 cm), more stacked stones survive (10 of 16 compared with 7 of 15),
+   and the probability the planner used has ECE 0.067.
 4. The final method adds a learned recalibration step to the Monte Carlo probability, trained on
    the outcomes of other experiments. Over 1,607 placements it lowers the Brier score from 0.236
    to 0.175 and the ECE from 0.165 to 0.048, and raises the AUC from 0.72 to 0.82. It helps in
@@ -363,6 +365,38 @@ taller towers, and separating the two experiments would need more towers. The
 point estimate stays overconfident (ECE 0.43 to 0.45). Under perception, the rocking margin with
 Monte Carlo gives ECE 0.165 compared with 0.103 for the tilt margin.
 
+### E2plan: planning with the recalibrated probability
+
+`python scripts/run_experiment.py --condition E2plan --profile study --towers 24 --delta 0.5`,
+then `python scripts/fig_e2grow.py` (tables in `results/e2grow/e2grow.md`)
+
+E2plan repeats E2grow with two changes. The planner's chance constraint uses the recalibrated
+probability (the learned recalibration fitted on E2all, E2grow, E4, E5 and E6 with the current
+tower index held out), and delta = 0.5. Screening still uses 8 samples per candidate. The recorded
+p_hat is the full Monte Carlo probability, and the probability the planner used is scored as a
+separate prediction on the full Monte Carlo samples.
+
+| Experiment | Stones per tower (mean, max) | Height in cm (mean, max) | Collapses | Placements | Stacked placements |
+| --- | --- | --- | --- | --- | --- |
+| E2grow, delta 0.3 | 1.62, 3 | 10.2, 21.1 | 0 | 179 | 107 |
+| E2plan, delta 0.5, recalibrated | 1.67, 2 | 9.6, 21.3 | 1 | 178 | 106 |
+
+| Placements | Survival rate | Monte Carlo: mean p, Brier, ECE | Recalibrated (other experiments): Brier, ECE | Probability used by the planner: Brier, ECE |
+| --- | --- | --- | --- | --- |
+| all | 0.48 | 0.43, 0.233, 0.168 | 0.177, 0.119 | 0.179, 0.067 [0.057, 0.152] |
+| on the ground | 0.68 | 0.76, 0.195, 0.137 | 0.135, 0.131 | 0.145, 0.104 |
+| stacked | 0.34 | 0.20, 0.259, 0.224 | 0.205, 0.126 | 0.202, 0.104 [0.068, 0.215] |
+
+- Tower growth is unchanged: 40 building placements compared with 39 in E2grow. In 23 of the 24
+  towers no candidate for the next stone reached the recalibrated probability 0.5, so the height
+  is set by the stones and poses on offer more than by the threshold.
+- Stacked building placements survived more often: 10 of 16 (0.62) compared with 7 of 15 (0.47)
+  in E2grow. The samples are small.
+- One tower collapsed (tower 12, second stone). The 8 sample screening gave 0.76 and the full
+  Monte Carlo evaluation 0.36.
+- The probability the planner used is well calibrated: ECE 0.067 over all 178 placements and
+  0.104 on stacked placements, compared with 0.168 and 0.224 for uncorrected Monte Carlo.
+
 ### E3: sources of margin variance (hypothesis H4)
 
 `python scripts/fig_sobol.py --profile study --towers 4 --n 256 --max-stones 3`
@@ -518,7 +552,9 @@ is written by `scripts/export_viewer.py` to `results/viewer/tower_viewer.html`.
   the same calibration results, and fewer placements survive in both, so absolute survival rates
   depend on the engine.
 - Towers under perception stop at about one stone with delta = 0.05. With delta = 0.3 (E2grow
-  and E4) they reach 1.6 stones on average and 3 at most.
+  and E4), or with the recalibrated probability at delta = 0.5 (E2plan), they reach 1.6 to 1.7
+  stones on average and 3 at most. In E2plan, 23 of 24 towers ended because no candidate for the
+  next stone reached probability 0.5.
 - The dynamic failure rule (5 mm or 2 degrees) and the static contact band (0.5 mm) interact, and
   the E1 bias depends on both.
 - E1, E2, E5 and E6 use the oracle lowering. In E4 a third of the placements fall back to it.

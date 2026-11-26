@@ -303,3 +303,89 @@ def test_planner_chance_constraint_uses_the_recalibrated_probability():
     assert not decision.feasible  # 0.2 misses p >= 0.95 although the raw probability passes
     rec = FixedRecalibrator.seen[0]
     assert rec["placement"] == 1 and rec["meta"]["stone_class"] == "flat_river" and rec["meta"]["n_contacts"] >= 1
+
+
+def _stacking_setup():
+    base = box((0.12, 0.10, 0.04), center=(0, 0, 0.02))
+    state = TowerState([PlacedStone("base", base, 1.2, base.centroid(), 0.6)])
+    stone = icosphere(2, 0.03).scaled([1.2, 1.0, 0.6])
+
+    class Est:
+        mean_mesh = stone
+        mass = 0.25
+        mu = 0.6
+
+    return state, Est()
+
+
+def _first_stable(planner, state, est, margin_fn):
+    from topple.planning.candidates import sample_candidates
+
+    for pose in sample_candidates(np.array([[0.0, 0.0, 0.04]]), est.mean_mesh, 8, np.random.default_rng(1)):
+        c = planner.evaluate(state, est, pose, margin_fn, 0)
+        if c is not None and c.settled.stable:
+            return c
+    pytest.skip("no stable candidate pose in this setup")
+
+
+def test_sequential_screen_samples_more_only_near_the_threshold():
+    state, est = _stacking_setup()
+    cfg = {"planner": {"delta": 0.5, "sequential_screen": True, "screen_batch": 8, "screen_max": 64}, "propagation": {"survival_tilt_deg": 3.0}}
+    for mean, expect_more in ((3.0, True), (25.0, False)):
+        rng = np.random.default_rng(0)
+        calls = []
+
+        def margin_fn(tower, cand, n_samples=None):
+            n = n_samples or 8
+            calls.append(n)
+            return rng.normal(mean, 2.0, n)
+
+        c = _first_stable(Planner(cfg, rng=np.random.default_rng(0)), state, est, margin_fn)
+        if expect_more:
+            assert c.margin_samples.size > 8 and c.margin_samples.size <= 64
+        else:
+            assert c.margin_samples.size == 8 and c.p_hat > 0.99
+
+
+def test_duplicate_settled_poses_are_scored_once():
+    state, est = _stacking_setup()
+    planner = Planner({"planner": {"dedupe_mm": 2.0, "dedupe_deg": 3.0}}, rng=np.random.default_rng(0))
+    margin_fn = lambda tower, cand: np.array([5.0, 6.0, 7.0])
+    pose = SE3(np.array([1.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.08]))
+    seen = []
+    assert planner.evaluate(state, est, pose, margin_fn, 0, seen=seen) is not None
+    assert planner.evaluate(state, est, pose, margin_fn, 0, seen=seen) is None
+    assert len(seen) == 1
+
+
+def test_flat_top_fraction_prefers_a_flat_top():
+    flat = Planner.flat_top_fraction(box((0.10, 0.10, 0.04), center=(0, 0, 0.02)))
+    round_ = Planner.flat_top_fraction(icosphere(3, 0.05))
+    assert flat == pytest.approx(0.01 / (np.pi * 0.05**2 * 2), rel=1e-6)  # top face over pi r^2, r = half diagonal
+    assert round_ < 0.5 * flat  # a sphere keeps only its cap (about 0.2)
+
+
+def test_acceptance_uses_a_fresh_evaluation_and_falls_back_to_the_next_candidate():
+    from types import SimpleNamespace
+
+    from topple.pipeline import Condition, Experiment
+    from topple.planning.planner import CandidatePlacement, Decision
+
+    state = TowerState([])
+    c0 = CandidatePlacement(0, SE3(), None, p_hat=0.8, J=5.0, feasible=True)
+    c1 = CandidatePlacement(1, SE3(np.array([1.0, 0, 0, 0]), np.array([0.1, 0, 0])), None, p_hat=0.7, J=4.0, feasible=True)
+    c2 = CandidatePlacement(2, SE3(np.array([1.0, 0, 0, 0]), np.array([0.2, 0, 0])), None, p_hat=0.2, J=6.0, feasible=False)
+    decision = Decision(0, c0.pose, None, None, 0.8, 5.0, [c0, c1, c2], None, True, float("nan"), c0)
+    full = {0: 0.3, 1: 0.7, 2: 0.9}
+
+    class Model:
+        def evaluate(self, placed, est, pose):
+            return SimpleNamespace(p_hat=full[est], samples=np.zeros(4), n_contacts=1)
+
+    planner = Planner({"planner": {"delta": 0.5}})
+    exp = Experiment({"experiment": {}}, Condition(), verbose=False)
+    d, final, info = exp._accept_full(planner, state, [], [0, 1, 2], decision, Model(), {"planner": {"accept_tries": 3}}, with_grasp=False)
+    # the screened choice fails its fresh evaluation; the next feasible candidate by J passes
+    assert d.stone_index == 1 and d.feasible and final.p_hat == 0.7 and info == {"accept_p": 0.7, "accept_try": 1}
+    d, final, info = exp._accept_full(planner, state, [], [0, 1, 2], decision, Model(), {"planner": {"accept_tries": 1}}, with_grasp=False)
+    assert not d.feasible and final is None and info["accept_try"] == -1

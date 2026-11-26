@@ -68,6 +68,7 @@ class CandidatePlacement:
     dh: float = 0.0
     feasible: bool = False
     p_raw: float = float("nan")  # Monte Carlo probability before recalibration (when used)
+    flat_top: float = 0.0  # buildability: flat upward facing top area as a fraction of the footprint
 
 
 @dataclass
@@ -82,6 +83,7 @@ class Decision:
     tower: Tower | None = None
     feasible: bool = True  # False when no candidate met the chance constraint (best effort choice)
     p_raw: float = float("nan")  # screening probability before recalibration (when used)
+    candidate: object = None  # the chosen CandidatePlacement
 
 
 def _estimate_fields(est):
@@ -147,6 +149,19 @@ class Planner:
         self.recalibrator = None
         self.recal_context: dict = {}
         self._support_world = None
+        # sequential screening: margin samples are drawn in batches until the screened probability
+        # is clear of the threshold 1 - delta by screen_z standard errors, or screen_max is reached
+        self.sequential_screen = bool(pc.get("sequential_screen", False))
+        self.screen_batch = int(pc.get("screen_batch", 8))
+        self.screen_max = int(pc.get("screen_max", 64))
+        self.screen_z = float(pc.get("screen_z", 2.0))
+        # settled poses of the same stone within dedupe_mm and dedupe_deg of an earlier one are
+        # scored once (many sampled poses settle into the same resting pose); 0 turns it off
+        self.dedupe_mm = float(pc.get("dedupe_mm", 0.0))
+        self.dedupe_deg = float(pc.get("dedupe_deg", 3.0))
+        # buildability: degrees added to J per unit flat top fraction (ranks candidates that pass)
+        self.build_weight = float(pc.get("build_weight", 0.0))
+        self._refining = False
 
     # ------------------------------------------------------------------ pieces
     def resting(self, key, mesh: TriMesh):
@@ -154,8 +169,55 @@ class Planner:
             self._resting_cache[key] = resting_orientations(mesh, n_drops=200, rng=self.rng)
         return self._resting_cache[key]
 
-    def evaluate(self, state: TowerState, est, pose: SE3, margin_fn, stone_index: int = -1) -> CandidatePlacement:
-        """Settle one candidate pose and score it."""
+    def _survival(self, samples: np.ndarray) -> float:
+        if 1 < samples.size < 32:
+            # screening uses few samples: a normal approximation from their mean and spread gives a
+            # smoother survival estimate than the empirical fraction (which jumps in steps of 1 / n)
+            from scipy.stats import norm
+
+            sd = float(np.std(samples, ddof=1))
+            return float(norm.sf((self.tau_deg - float(np.mean(samples))) / max(sd, 1e-6)))
+        return survival_probability(samples, self.tau_deg)
+
+    def _survival_se(self, samples: np.ndarray) -> float:
+        """Standard error of the normal approximation p = Phi(z), z = (mean - tau) / sd (delta method)."""
+        from scipy.stats import norm
+
+        n = samples.size
+        sd = max(float(np.std(samples, ddof=1)), 1e-6)
+        z = (float(np.mean(samples)) - self.tau_deg) / sd
+        return float(norm.pdf(z) * np.sqrt((1.0 + 0.5 * z * z) / n))
+
+    def _planner_p(self, state: TowerState, cand: CandidatePlacement, samples: np.ndarray) -> float:
+        p = self._survival(samples)
+        if self.recalibrator is not None:
+            cand.p_raw = p
+            p = self._recalibrated(state, cand, samples)
+        return p
+
+    @staticmethod
+    def flat_top_fraction(mesh_w: TriMesh, min_nz: float = 0.9, height_fraction: float = 0.25) -> float:
+        """Upward facing area (normal z >= min_nz) in the top height_fraction of the stone, as a
+        fraction of the area of the stone's horizontal extent (pi r^2): a flat top to build on."""
+        v = mesh_w.vertices
+        zmax, zmin = float(v[:, 2].max()), float(v[:, 2].min())
+        nrm = mesh_w.face_normals()
+        cz = mesh_w.triangles()[:, :, 2].mean(axis=1)
+        keep = (nrm[:, 2] >= min_nz) & (cz >= zmax - height_fraction * (zmax - zmin))
+        c = mesh_w.centroid()
+        r = float(np.max(np.linalg.norm(v[:, :2] - c[:2], axis=1)))
+        return float(np.clip(mesh_w.face_areas()[keep].sum() / max(np.pi * r * r, 1e-12), 0.0, 1.0))
+
+    def _is_duplicate(self, pose: SE3, seen: list) -> bool:
+        for P in seen:
+            if np.linalg.norm(P.t - pose.t) < 1e-3 * self.dedupe_mm:
+                c = abs(float(np.dot(P.q, pose.q)))
+                if 2.0 * np.degrees(np.arccos(min(c, 1.0))) < self.dedupe_deg:
+                    return True
+        return False
+
+    def evaluate(self, state: TowerState, est, pose: SE3, margin_fn, stone_index: int = -1, seen: list | None = None) -> CandidatePlacement | None:
+        """Settle one candidate pose and score it (None for a duplicate of a pose in ``seen``)."""
         mesh_b, mass, com_b, mu = _estimate_fields(est)
         if self.settler is not None:
             # dynamic settling on the estimated geometry (Section 9.1), dropped from the sampled pose
@@ -166,28 +228,45 @@ class Planner:
                 # a tower is one column: the new stone must rest on the current top stone only
                 top_id = len(state.stones)
                 settled.stable = bool(settled.stable and np.all(settled.support_index == top_id))
+        if seen is not None and self.dedupe_mm > 0:
+            if self._is_duplicate(settled.pose, seen):
+                return None
+            seen.append(settled.pose)
         cand = CandidatePlacement(stone_index, settled.pose, settled)
         mesh_w = mesh_b.transformed(settled.pose)
         cand.dh = float(mesh_w.vertices[:, 2].max() - state.top_height())
         tower = build_static_tower(state, mesh_w, mass, settled.pose.apply(com_b), mu, self.contact_margin, self.max_points, self.rng)
         cand.tower = tower
         samples = np.asarray(margin_fn(tower, cand), dtype=np.float64).reshape(-1)
+        cand.p_hat = self._planner_p(state, cand, samples)
+        if self.sequential_screen and not self._refining and settled.stable and samples.size > 1:
+            # sample more while the screened probability is within screen_z standard errors of the
+            # threshold (clear accepts and rejects stop at the first batch)
+            while samples.size < self.screen_max and abs(cand.p_hat - (1.0 - self.delta)) <= self.screen_z * self._survival_se(samples):
+                more = np.asarray(margin_fn(tower, cand, n_samples=self.screen_batch), dtype=np.float64).reshape(-1)
+                if more.size == 0:
+                    break
+                samples = np.concatenate([samples, more])
+                cand.p_hat = self._planner_p(state, cand, samples)
         cand.margin_samples = samples
-        if 1 < samples.size < 32:
-            # screening uses few samples: a normal approximation from their mean and spread gives a
-            # smoother survival estimate than the empirical fraction (which jumps in steps of 1 / n)
-            from scipy.stats import norm
-
-            sd = float(np.std(samples, ddof=1))
-            cand.p_hat = float(norm.sf((self.tau_deg - float(np.mean(samples))) / max(sd, 1e-6)))
-        else:
-            cand.p_hat = survival_probability(samples, self.tau_deg)
-        if self.recalibrator is not None:
-            cand.p_raw = cand.p_hat
-            cand.p_hat = self._recalibrated(state, cand, samples)
         cand.feasible = settled.stable and chance_ok(cand.p_hat, self.delta)
         cand.J = objective(samples, cand.dh, self.kappa, self.lambda_h)
+        if self.build_weight > 0:
+            cand.flat_top = self.flat_top_fraction(mesh_w, self.top_min_nz, self.top_height_fraction)
+            cand.J += self.build_weight * cand.flat_top
         return cand
+
+    def acceptance_probability(self, state: TowerState, cand: CandidatePlacement, p_full: float, samples, n_contacts: int) -> float:
+        """Probability used for acceptance from a fresh full evaluation of the chosen candidate
+        (recalibrated when the planner has a recalibrator)."""
+        if self.recalibrator is None:
+            return float(p_full)
+        from ..eval.recalibration import candidate_record
+
+        classes = self.recal_context.get("classes") or []
+        cls = classes[cand.stone_index] if 0 <= cand.stone_index < len(classes) else None
+        rec = candidate_record(p_full, np.asarray(samples), len(state.stones), state.top_height() + cand.dh, n_contacts, cls, self.recal_context.get("settings", {}))
+        return float(self.recalibrator.predict([rec])[0])
 
     def _recalibrated(self, state: TowerState, cand: CandidatePlacement, samples) -> float:
         from ..eval.recalibration import candidate_record
@@ -195,7 +274,7 @@ class Planner:
         classes = self.recal_context.get("classes") or []
         cls = classes[cand.stone_index] if 0 <= cand.stone_index < len(classes) else None
         nc = cand.tower.n_contacts if cand.tower is not None else 0
-        rec = candidate_record(cand.p_hat, samples, len(state.stones), state.top_height() + cand.dh, nc, cls, self.recal_context.get("settings", {}))
+        rec = candidate_record(cand.p_raw, samples, len(state.stones), state.top_height() + cand.dh, nc, cls, self.recal_context.get("settings", {}))
         return float(self.recalibrator.predict([rec])[0])
 
     def refine(self, state: TowerState, est, cand: CandidatePlacement, margin_fn) -> CandidatePlacement:
@@ -225,6 +304,7 @@ class Planner:
 
         x0 = np.zeros(3)
         bounds = (np.array([-0.02, -0.02, -0.3]), np.array([0.02, 0.02, 0.3]))
+        self._refining = True
         if self.optimiser == "cma_es":
             x, _, _ = cma_es(fval, x0, sigma0=0.008, iters=self.refine_iters, rng=self.rng, bounds=bounds)
         elif self.optimiser == "gradient":
@@ -239,6 +319,7 @@ class Planner:
             x, _, _ = gradient_ascent(fval, grad, x0, step=0.002, iters=self.refine_iters, bounds=bounds)
         else:
             x, _, _ = nelder_mead(fval, x0, step=np.array([0.005, 0.005, 0.1]), iters=self.refine_iters, bounds=bounds)
+        self._refining = False
         for val, c in cache.values():
             if c.feasible and c.J > (best.J if best.feasible else -np.inf):
                 best = c
@@ -313,8 +394,11 @@ class Planner:
             else:
                 resting = self.resting(id(est), mesh_b)
             poses = sample_candidates(top_pts, mesh_b, self.n_candidates, self.rng, resting=resting)
+            seen: list = []
             for pose in poses:
-                cand = self.evaluate(tower_estimate, est, pose, margin_fn, si)
+                cand = self.evaluate(tower_estimate, est, pose, margin_fn, si, seen=seen)
+                if cand is None:
+                    continue
                 all_candidates.append(cand)
                 if cand.feasible and (best is None or cand.J > best.J):
                     best = cand
@@ -330,4 +414,4 @@ class Planner:
         grasp = self.plan_grasp(pile_estimates[best.stone_index], tower_estimate, best) if with_grasp else None
         if refine and feasible:
             feasible = bool(best.feasible)
-        return Decision(best.stone_index, best.pose, grasp, best.margin_samples, best.p_hat, best.J, all_candidates, best.tower, feasible, best.p_raw)
+        return Decision(best.stone_index, best.pose, grasp, best.margin_samples, best.p_hat, best.J, all_candidates, best.tower, feasible, best.p_raw, best)

@@ -173,6 +173,7 @@ class Experiment:
         stop_infeasible = bool(get(cfg, "experiment.stop_when_infeasible", True))
         n_probes = int(get(cfg, "experiment.probes_per_step", 0))
         rng_probe = make_rng(self.seed, t, Stage.EVAL, 77)
+        accept_full = bool(get(cfg, "planner.accept_full", False))
         for k in range(max_stones):
             if not available:
                 break
@@ -180,19 +181,24 @@ class Experiment:
             pile = [estimates[i] for i in available]
             planner.recal_context["classes"] = [bodies[i].meta.get("stone_class") for i in available]
 
-            def margin_fn(tower, cand, _pile=pile):
+            def margin_fn(tower, cand, _pile=pile, n_samples=None):
                 # coarse evaluation for screening: few samples and azimuths (a point estimate when the
                 # condition propagates nothing); the chosen pose is re-evaluated at full resolution
                 est_c = _pile[cand.stone_index]
                 if model.method == "none":
                     return model.evaluate(placed, est_c, cand.pose, n_azimuth=screen_azimuth).samples
-                return model.evaluate(placed, est_c, cand.pose, n_samples=screen_samples, n_azimuth=screen_azimuth, method="mc").samples
+                return model.evaluate(placed, est_c, cand.pose, n_samples=n_samples or screen_samples, n_azimuth=screen_azimuth, method="mc").samples
 
             decision = planner.choose(state, pile, margin_fn, with_grasp=(cond.placement == "arm"))
             t_choose = time.perf_counter() - t0
             if decision is None:
                 self.log(f"  placement {k}: no candidate, stopping")
                 break
+            final_pre, accept = None, {}
+            if accept_full and decision.feasible:
+                # acceptance on a fresh full evaluation (independent of the screening samples)
+                decision, final_pre, accept = self._accept_full(planner, state, placed, pile, decision, model, cfg, with_grasp=(cond.placement == "arm"))
+                t_choose = time.perf_counter() - t0
             # probe placements: extra candidates tested on clones of the true world (calibration data
             # across the range of predicted survival probability; the tower itself is unchanged)
             if n_probes > 0:
@@ -214,7 +220,7 @@ class Experiment:
             body = bodies[i]
             est = estimates[i]
             t1 = time.perf_counter()
-            final = model.evaluate(placed, est, decision.pose)
+            final = final_pre if final_pre is not None else model.evaluate(placed, est, decision.pose)
             # decision time: the choice plus the final evaluation (probe placements and their tests,
             # which run in between, are excluded)
             ms = 1000 * (t_choose + time.perf_counter() - t1)
@@ -255,7 +261,7 @@ class Experiment:
                 ms_decision=ms,
                 shake_true=outcomes["shake"].value if "shake" in outcomes else float("nan"),
                 push_true=outcomes["push"].value if "push" in outcomes else float("nan"),
-                meta={"J": decision.J, "kappa": cond.kappa, "pose": decision.pose.matrix().tolist(), "n_candidates": len(decision.candidates), "n_contacts": final.n_contacts, "screen_p_hat": decision.p_hat, "screen_p_raw": decision.p_raw, "arm_fallback": body.meta.get("arm_fallback"), "probe": False, "feasible": decision.feasible, "release": body.meta.get("release_check"), "tilt_per_azimuth": outcomes["tilt"].per_direction if "tilt" in outcomes else None, "preds": preds, "stone_class": body.meta.get("stone_class")},
+                meta={"J": decision.J, "kappa": cond.kappa, "pose": decision.pose.matrix().tolist(), "n_candidates": len(decision.candidates), "n_contacts": final.n_contacts, "screen_p_hat": decision.p_hat, "screen_p_raw": decision.p_raw, "arm_fallback": body.meta.get("arm_fallback"), "probe": False, "feasible": decision.feasible, "accept_p": accept.get("accept_p"), "accept_try": accept.get("accept_try"), "release": body.meta.get("release_check"), "tilt_per_azimuth": outcomes["tilt"].per_direction if "tilt" in outcomes else None, "preds": preds, "stone_class": body.meta.get("stone_class")},
             )
             records.append(rec)
             self.log(f"  placement {k}: {body.name} m_hat {rec.m_hat:.1f} [{rec.m_lo:.1f}, {rec.m_hi:.1f}] p_hat {rec.p_hat:.2f} | m_true {m_true:.1f} y {y:.0f} | {ms:.0f} ms")
@@ -327,6 +333,33 @@ class Experiment:
             except Exception as exc:  # pragma: no cover
                 out["margin:simulation"] = {"error": repr(exc)}
         return out
+
+    def _accept_full(self, planner, state, placed, pile, decision, model, cfg, with_grasp: bool):
+        """Accept the planner's choice only if a fresh full Monte Carlo evaluation (independent of
+        the screening samples, recalibrated when the planner uses a recalibrator) meets the chance
+        constraint; otherwise try the next feasible candidates by J, up to planner.accept_tries in
+        all. The screened maximum of noisy estimates is biased upward; the fresh evaluation is not.
+        Returns (decision, full evaluation or None, info)."""
+        from .planning.objective import chance_ok
+        from .planning.planner import Decision
+
+        tries = max(int(get(cfg, "planner.accept_tries", 3)), 1)
+        first = decision.candidate
+        others = sorted((c for c in decision.candidates if c.feasible and c is not first and c.pose is not decision.pose), key=lambda c: -c.J)
+        queue = ([first] if first is not None else []) + others
+        for n_try, c in enumerate(queue[:tries]):
+            est_c = pile[c.stone_index]
+            final = model.evaluate(placed, est_c, c.pose)
+            p_acc = planner.acceptance_probability(state, c, final.p_hat, final.samples, final.n_contacts)
+            self.log(f"  acceptance try {n_try}: screened p {c.p_hat:.2f}, full evaluation p {p_acc:.2f}")
+            if chance_ok(p_acc, planner.delta):
+                if c is first:
+                    return decision, final, {"accept_p": p_acc, "accept_try": n_try}
+                grasp = planner.plan_grasp(est_c, state, c) if with_grasp else None
+                d = Decision(c.stone_index, c.pose, grasp, c.margin_samples, c.p_hat, c.J, decision.candidates, c.tower, True, c.p_raw, c)
+                return d, final, {"accept_p": p_acc, "accept_try": n_try}
+        decision.feasible = False
+        return decision, None, {"accept_try": -1}
 
     def _pick_probes(self, decision, n: int, rng) -> list:
         """Stable candidates other than the chosen pose, spread over predicted survival probability:

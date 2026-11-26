@@ -48,6 +48,10 @@ CONDITIONS = {
     "E2grow": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none"], "eval_margins": ["rocking"]}),
     # E2 planning with the learned recalibration in the chance constraint (run with --delta 0.5)
     "E2plan": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none"], "eval_margins": ["rocking"], "recalibrate_planner": True}),
+    # diagnostics for tower height under perception (E2plan settings plus the overrides in
+    # CONFIG_OVERRIDES): more candidate poses per stone, and more and sharper depth views
+    "E2cand": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none"], "eval_margins": ["rocking"], "recalibrate_planner": True}),
+    "E2view": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["none"], "eval_margins": ["rocking"], "recalibrate_planner": True}),
     "E2ut": dict(oracle=False, propagation="mc", margin="tilt", extra={"eval_methods": ["unscented"]}),
     "E1": dict(oracle=True, propagation="none", margin="tilt"),
     "E1_push": dict(oracle=True, propagation="none", margin="push"),
@@ -62,6 +66,21 @@ CONDITIONS = {
     "E7": dict(oracle=True, propagation="none", margin="tilt"),
     "E8": dict(oracle=False, propagation="none", margin="simulation"),
 }
+
+# configuration changes that belong to a condition (dotted keys), applied before --set
+CONFIG_OVERRIDES = {
+    "E2cand": {"planner.n_candidates": 48},
+    "E2view": {"sensor.width": 640, "sensor.height": 480, "sensor.in_hand_views": 8, "sensor.in_hand_elevations": [-30.0, -70.0]},
+}
+
+
+def set_dotted(cfg: dict, key: str, value) -> None:
+    """Set cfg["a"]["b"] = value for key "a.b", creating sections as needed."""
+    *path, last = key.split(".")
+    d = cfg
+    for k in path:
+        d = d.setdefault(k, {})
+    d[last] = value
 
 
 def main(argv=None):
@@ -86,6 +105,8 @@ def main(argv=None):
     ap.add_argument("--probes", type=int, default=None, help="probe placements per step")
     ap.add_argument("--tag", default="", help="suffix for the output directory name")
     ap.add_argument("--delta", type=float, default=None, help="chance constraint p_hat >= 1 - delta")
+    ap.add_argument("--tower-start", type=int, default=0, help="first tower index (fresh stone sets for held out tests)")
+    ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="config override, e.g. planner.n_candidates=48 (value parsed as YAML)")
     args = ap.parse_args(argv)
 
     cfg = load_config(args.profile)
@@ -99,6 +120,13 @@ def main(argv=None):
         cfg["experiment"]["probes_per_step"] = args.probes
     if args.delta is not None:
         cfg["planner"]["delta"] = args.delta
+    import yaml
+
+    for key, value in CONFIG_OVERRIDES.get(args.condition, {}).items():
+        set_dotted(cfg, key, value)
+    for item in args.set:
+        key, _, value = item.partition("=")
+        set_dotted(cfg, key.strip(), yaml.safe_load(value))
     if args.placement == "arm":
         # the pile within the reach of the arm, and fingers that open wide enough for the stones
         cfg["stones"]["pile_layout"] = "arc"
@@ -115,7 +143,7 @@ def main(argv=None):
     suffix = "_".join(f"{k}{v}" for k, v in [("prop", base["propagation"]), ("m", base["margin"]), ("k", base["kappa"]), ("N", base["cone_sides"]), ("ns", base["noise_scale"] if "noise_scale" in base else 1.0), ("fs", base["friction_log_sigma"]), ("d", cfg["planner"]["delta"]), ("cls", base.get("stone_class") or "all")])
     cond = Condition(name=name, **base)
     t0 = time.time()
-    towers = list(range(int(cfg["experiment"]["n_towers"])))
+    towers = list(range(args.tower_start, args.tower_start + int(cfg["experiment"]["n_towers"])))
     errors = {}
     if args.workers > 1:
         import multiprocessing as mp

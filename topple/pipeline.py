@@ -448,7 +448,15 @@ class Experiment:
                 views.append(sensor.render_depth(meshes, T, ids=ids))
             # in hand views: the stone alone (lifted from the pile), seen from below, fingers masked
             # by rendering the stone only; expressed in the stone's resting world frame
-            for T in in_hand_views(center, radius, int(scfg.get("in_hand_views", 4)), rng):
+            n_hand = int(scfg.get("in_hand_views", 4))
+            elevs = scfg.get("in_hand_elevations")
+            if elevs:
+                # views split over several elevations below the stone (steeper ones see the underside)
+                split = [n_hand // len(elevs) + (1 if j < n_hand % len(elevs) else 0) for j in range(len(elevs))]
+                hand_poses = [T for e, n_e in zip(elevs, split) for T in in_hand_views(center, radius, n_e, rng, elev_deg=float(e))]
+            else:
+                hand_poses = in_hand_views(center, radius, n_hand, rng)
+            for T in hand_poses:
                 views.append(sensor.render_depth([meshes[target]], T, ids=[target]))
             cfg_e = dict(cfg)
             cfg_e["friction"] = dict(cfg["friction"], prior_log_sigma=cond.friction_log_sigma)

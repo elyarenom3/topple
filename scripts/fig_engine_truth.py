@@ -87,7 +87,7 @@ def _recalibrated(test):
     train = []
     for p in sorted(glob.glob(str(ROOT / "results" / "experiments" / "*" / "records.json"))):
         name = Path(p).parent.name
-        if name.startswith(("E1all", "E2all", "E2grow", "E2plan", "E5_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_")):
+        if name.startswith(("E1all", "E2all", "E2grow", "E2plan", "E2cand", "E2view", "E2fresh", "E5_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_")):
             continue
         s = settings_from_name(name)
         for r in json.load(open(p)):

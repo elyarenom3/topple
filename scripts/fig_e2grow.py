@@ -28,7 +28,9 @@ from topple.eval.recalibration import leave_tower_out, settings_from_name, train
 EXP = ROOT / "results" / "experiments"
 OUT = ROOT / "results" / "e2grow"
 N_BOOT = 1000
-SKIP_TRAIN = ("E1all", "E2all", "E2grow", "E2plan", "E5_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_")
+SKIP_TRAIN = ("E1all", "E2all", "E2grow", "E2plan", "E2cand", "E2view", "E2fresh", "E5_propmc_mtilt_k1.0_N8_ns1.0_fs0.25_")
+PLANNER_RECAL = ("E2plan", "E2cand", "E2view", "E2plan2")
+EXPERIMENTS = ("E2all", "E2grow") + PLANNER_RECAL
 
 
 def load(prefix: str):
@@ -58,7 +60,7 @@ def predictions(recs, train, exp):
     for k, name in (("method:none", "point estimate"), ("margin:rocking", "rocking margin, Monte Carlo")):
         P[name] = np.array([r["meta"]["preds"][k]["p_hat"] for r in recs])
     P["Monte Carlo with learned recalibration"] = leave_tower_out(recs, train, "boosted", context=True)
-    if exp == "E2plan":
+    if exp in PLANNER_RECAL:
         # the recalibrator the planner used: earlier perception experiments, this tower index held out
         P["recalibration used by the planner"] = leave_tower_out(recs, training_records(EXP), "boosted", context=True)
     return P
@@ -86,18 +88,20 @@ def growth(recs):
     build = [r for r in recs if not r["meta"].get("probe")]
     towers = sorted({r["tower"] for r in recs})
     stones = [sum(1 for r in build if r["tower"] == t) for t in towers]
+    ended = sum(1 for r in recs if r["meta"].get("tag") == "final_infeasible")
     heights = [max([r["height"] for r in build if r["tower"] == t] or [0.0]) for t in towers]
     return {"towers": len(towers), "stones_mean": float(np.mean(stones)), "stones_max": int(max(stones)),
             "height_mean_cm": 100 * float(np.mean(heights)), "height_max_cm": 100 * float(max(heights)),
             "collapse_rate": float(np.mean([r["collapsed"] for r in build])), "n": len(recs),
-            "n_stacked": sum(r["placement"] >= 1 for r in recs)}
+            "n_stacked": sum(r["placement"] >= 1 for r in recs), "n_build": len(build),
+            "steps_accepted": len(build) / max(len(build) + ended, 1)}
 
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     train = train_set()
     res = {}
-    exps = [e for e in ("E2all", "E2grow", "E2plan") if glob.glob(str(EXP / f"{e}_*" / "records.json"))]
+    exps = [e for e in EXPERIMENTS if glob.glob(str(EXP / f"{e}_*" / "records.json"))]
     for exp in exps:
         recs = load(exp)
         y = np.array([r["y"] for r in recs], dtype=float)
@@ -113,12 +117,12 @@ def main():
         return f"{v[k]:.3f} [{v[k + '_ci'][0]:.3f}, {v[k + '_ci'][1]:.3f}]"
 
     L = ["# E2 with a looser chance constraint", "",
-         "Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05, E2grow delta 0.3, and E2plan delta 0.5 with the learned recalibration in the chance constraint; all use the perceived stones and the same stones per tower index. Intervals: 95% bootstrap over towers.", "",
-         "| Experiment | Towers | Stones per tower (mean, max) | Height cm (mean, max) | Collapse rate | Placements | Stacked placements |",
-         "| --- | --- | --- | --- | --- | --- | --- |"]
+         "Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. E2plan uses delta 0.5 with the learned recalibration in the chance constraint; E2cand adds 48 candidate poses per stone, E2view 8 in hand views at two elevations and 640 x 480 depth images, and E2plan2 the sequential screen with acceptance on a fresh full evaluation. All use the perceived stones and the same stones per tower index. Steps accepted: building placements over steps that ended a tower for want of a candidate meeting the chance constraint plus building placements. Intervals: 95% bootstrap over towers.", "",
+         "| Experiment | Towers | Stones per tower (mean, max) | Height cm (mean, max) | Collapse rate | Steps accepted | Placements | Stacked placements |",
+         "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     for exp, v in res.items():
         g = v["growth"]
-        L.append(f"| {exp} | {g['towers']} | {g['stones_mean']:.2f}, {g['stones_max']} | {g['height_mean_cm']:.1f}, {g['height_max_cm']:.1f} | {g['collapse_rate']:.2f} | {g['n']} | {g['n_stacked']} |")
+        L.append(f"| {exp} | {g['towers']} | {g['stones_mean']:.2f}, {g['stones_max']} | {g['height_mean_cm']:.1f}, {g['height_max_cm']:.1f} | {g['collapse_rate']:.2f} | {g['steps_accepted']:.2f} | {g['n']} | {g['n_stacked']} |")
     for split in ("all", "ground", "stacked"):
         L += ["", f"## Placements: {split}", "", "| Experiment | Prediction | n | Survival rate | Mean stated p | Brier | ECE | AUC |", "| --- | --- | --- | --- | --- | --- | --- | --- |"]
         for exp, v in res.items():

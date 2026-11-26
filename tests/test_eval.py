@@ -84,3 +84,33 @@ def test_recalibrator_corrects_a_miscalibrated_probability(tmp_path):
     rc = Recalibrator("logistic", context=False).fit(recs)
     rc.save(tmp_path / "cal.pkl")
     assert np.allclose(Recalibrator.load(tmp_path / "cal.pkl").predict(recs[:20]), rc.predict(recs[:20]))
+
+
+def test_debiased_calibration_error_is_near_zero_for_a_calibrated_predictor():
+    from topple.eval.metrics import debiased_calibration_error, expected_calibration_error
+
+    d, e = [], []
+    for seed in range(20):
+        rng = np.random.default_rng(seed)
+        p = rng.beta(2, 4, 400)
+        y = (rng.random(400) < p).astype(float)
+        d.append(debiased_calibration_error(p, y))
+        e.append(expected_calibration_error(p, y, 7, "equal_mass"))
+    # the plug in ECE is biased upward on small samples; the debiased error is closer to zero
+    assert np.mean(d) < 0.03 and np.mean(d) < np.mean(e)
+    assert debiased_calibration_error(np.full(200, 0.9), np.zeros(200)) > 0.8
+
+
+def test_logit_level_recalibrator_learns_a_stacked_shift():
+    from topple.eval.recalibration import Recalibrator
+
+    rng = np.random.default_rng(0)
+    recs = []
+    for i in range(1200):
+        p = float(rng.uniform(0.05, 0.95))
+        level = int(i % 2)
+        true = min(p + 0.2, 1.0) if level else p  # stacked placements survive more than stated
+        recs.append({"p_hat": p, "placement": level, "y": float(rng.random() < true), "settings": {}})
+    rc = Recalibrator("logit_level").fit(recs)
+    q = rc.predict([{"p_hat": 0.3, "placement": 0}, {"p_hat": 0.3, "placement": 1}])
+    assert abs(q[0] - 0.3) < 0.08 and q[1] > q[0] + 0.1

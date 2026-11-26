@@ -61,7 +61,23 @@ def _model(kind: str):
         from sklearn.preprocessing import StandardScaler
 
         return make_pipeline(SimpleImputer(), StandardScaler(), LogisticRegression(C=1.0, max_iter=2000))
+    if kind == "logit_level":
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        return make_pipeline(StandardScaler(), LogisticRegression(C=10.0, max_iter=2000))
     raise ValueError(kind)
+
+
+def logit_level_features(record: dict) -> list[float]:
+    """Few parameter recalibration: logit of the Monte Carlo probability, a stacked indicator, their
+    product (a separate slope and intercept for stacked placements) and the depth noise scale."""
+    p = float(np.clip(record["p_hat"], 0.01, 0.99))
+    z = float(np.log(p / (1 - p)))
+    st = float(record["placement"] >= 1)
+    s = {**DEFAULT_SETTINGS, **record.get("settings", {})}
+    return [z, st, z * st, float(s["noise_scale"])]
 
 
 class Recalibrator:
@@ -74,6 +90,8 @@ class Recalibrator:
         self.model = None
 
     def _X(self, records) -> np.ndarray:
+        if self.kind == "logit_level":
+            return np.array([logit_level_features(r) for r in records], dtype=float)
         return np.array([features(r, self.context) for r in records], dtype=float)
 
     def fit(self, records) -> "Recalibrator":

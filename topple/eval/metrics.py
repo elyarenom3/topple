@@ -78,6 +78,28 @@ def expected_calibration_error(p: np.ndarray, y: np.ndarray, n_bins: int = 10, s
     return float(ece)
 
 
+def debiased_calibration_error(p: np.ndarray, y: np.ndarray, n_bins: int = 7) -> float:
+    """Debiased L2 calibration error with equal mass bins (Kumar, Liang and Ma 2019):
+    sqrt(max(0, sum_b n_b / n [(ybar_b - pbar_b)^2 - ybar_b (1 - ybar_b) / (n_b - 1)])). The
+    subtracted term removes the positive bias of the plug in estimate on small samples."""
+    p = np.asarray(p, dtype=float)
+    y = np.asarray(y, dtype=float)
+    n = len(p)
+    if n == 0:
+        return float("nan")
+    edges = _bin_edges(p, n_bins, "equal_mass")
+    b = _assign_bins(p, edges)
+    total = 0.0
+    for k in range(len(edges) - 1):
+        m = b == k
+        nk = int(m.sum())
+        if nk < 2:
+            continue
+        yk, pk = y[m].mean(), p[m].mean()
+        total += nk / n * ((yk - pk) ** 2 - yk * (1 - yk) / (nk - 1))
+    return float(np.sqrt(max(total, 0.0)))
+
+
 def maximum_calibration_error(p: np.ndarray, y: np.ndarray, n_bins: int = 10, scheme: str = "equal_width") -> float:
     p = np.asarray(p, dtype=float)
     y = np.asarray(y, dtype=float)

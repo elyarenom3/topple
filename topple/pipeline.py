@@ -160,7 +160,11 @@ class Experiment:
             from .eval.recalibration import Recalibrator, training_records
 
             exp_dir = cond.extra.get("recalibration_data", str(Path(__file__).resolve().parents[1] / "results" / "experiments"))
-            planner.recalibrator = Recalibrator("boosted", context=True).fit(training_records(exp_dir, exclude_tower=t))
+            if cond.extra.get("recalibrator_path"):
+                # a frozen recalibrator, fitted once on earlier towers (held out test on fresh towers)
+                planner.recalibrator = Recalibrator.load(cond.extra["recalibrator_path"])
+            else:
+                planner.recalibrator = Recalibrator("boosted", context=True).fit(training_records(exp_dir, exclude_tower=t))
             planner.recal_context["settings"] = {"kappa": cond.kappa, "noise_scale": cond.noise_scale, "friction_log_sigma": cond.friction_log_sigma, "delta": planner.delta}
         screen_samples = int(get(cfg, "planner.screen_samples", 8))
         screen_azimuth = int(get(cfg, "planner.screen_azimuths", 12))

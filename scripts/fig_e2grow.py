@@ -117,7 +117,7 @@ def main():
         return f"{v[k]:.3f} [{v[k + '_ci'][0]:.3f}, {v[k + '_ci'][1]:.3f}]"
 
     L = ["# E2 with a looser chance constraint", "",
-         "Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. E2plan uses delta 0.5 with the learned recalibration in the chance constraint; E2cand adds 48 candidate poses per stone, E2view 8 in hand views at two elevations and 640 x 480 depth images, and E2plan2 the sequential screen with acceptance on a fresh full evaluation. All use the perceived stones and the same stones per tower index. Steps accepted: building placements over steps that ended a tower for want of a candidate meeting the chance constraint plus building placements. Intervals: 95% bootstrap over towers.", "",
+         "Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. E2plan uses delta 0.5 with the learned recalibration in the chance constraint; E2cand adds 48 candidate poses per stone, E2view 8 in hand views at two elevations and 640 x 480 depth images, and E2plan2 the sequential screen with acceptance on a fresh full evaluation and 48 candidate poses per stone. All use the perceived stones and the same stones per tower index. Steps accepted: building placements over steps that ended a tower for want of a candidate meeting the chance constraint plus building placements. Intervals: 95% bootstrap over towers.", "",
          "| Experiment | Towers | Stones per tower (mean, max) | Height cm (mean, max) | Collapse rate | Steps accepted | Placements | Stacked placements |",
          "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     for exp, v in res.items():

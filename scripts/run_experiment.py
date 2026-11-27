@@ -76,8 +76,8 @@ CONDITIONS = {
 # configuration changes that belong to a condition (dotted keys), applied before --set
 CONFIG_OVERRIDES = {
     "E2cand": {"planner.n_candidates": 48},
-    "E2plan2": {"planner.sequential_screen": True, "planner.accept_full": True, "planner.accept_tries": 3, "planner.dedupe_mm": 2.0, "planner.build_weight": 3.0},
-    "E2fresh": {"planner.sequential_screen": True, "planner.accept_full": True, "planner.accept_tries": 3, "planner.dedupe_mm": 2.0, "planner.build_weight": 3.0},
+    "E2plan2": {"planner.n_candidates": 48, "planner.sequential_screen": True, "planner.accept_full": True, "planner.accept_tries": 3, "planner.dedupe_mm": 2.0, "planner.build_weight": 3.0},
+    "E2fresh": {"planner.n_candidates": 48, "planner.sequential_screen": True, "planner.accept_full": True, "planner.accept_tries": 3, "planner.dedupe_mm": 2.0, "planner.build_weight": 3.0},
     "E2view": {"sensor.width": 640, "sensor.height": 480, "sensor.in_hand_views": 8, "sensor.in_hand_elevations": [-30.0, -70.0]},
 }
 

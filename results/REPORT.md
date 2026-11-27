@@ -22,7 +22,9 @@ report are kept in `results/archive_v1/`.
    collapses, and Monte Carlo stays calibrated on the stacked placements (ECE 0.10; 0.056 after
    recalibration). Planning with the recalibrated probability at delta 0.5 (E2plan) gives the
    same growth (1.7 stones, 9.6 cm), more stacked stones survive (10 of 16 compared with 7 of 15),
-   and the probability the planner used has ECE 0.067.
+   and the probability the planner used has ECE 0.067. On 24 fresh stone sets, a recalibrator frozen beforehand lowers
+   the ECE from 0.169 to 0.059 (chance level 0.074), and the product of the stated probabilities
+   predicts whole tower survival (0.57 stated, 0.54 observed).
 4. The final method adds a learned recalibration step to the Monte Carlo probability, trained on
    the outcomes of other experiments. Over 1,607 placements it lowers the Brier score from 0.236
    to 0.175 and the ECE from 0.165 to 0.048, and raises the AUC from 0.72 to 0.82. It helps in
@@ -470,6 +472,44 @@ chosen:
   towers need candidates with a higher true survival probability, from better seated poses or
   stones chosen for the level.
 
+### Calibration check: a frozen recalibrator on fresh towers (E2fresh)
+
+`python scripts/fig_calibration_check.py --fit`, then
+`python scripts/run_experiment.py --condition E2fresh --profile study --towers 24 --tower-start 24 --delta 0.5`,
+then `python scripts/fig_calibration_check.py --test` (tables in `results/calibration_check/`)
+
+The recalibrator was chosen and frozen before the test run. Under leave one tower out on the 2,660
+placements of towers 0 to 23 (E2all, E2grow, E2plan, E2cand, E2view, E2plan2, E4, E5 and E6), the
+gradient boosted recalibrator scored Brier 0.167 and ECE 0.033, compared with 0.208 and 0.039 for a
+logistic model on the logit of the Monte Carlo probability with stacked terms. The boosted model
+was refitted on all 2,660 placements and frozen. E2fresh then ran the E2plan2 planner with the
+frozen recalibrator in its chance constraint on 24 new stone sets (towers 24 to 47), which no
+model had seen.
+
+| Placements | Prediction | n | Survival rate | Mean stated p | Brier | ECE | ECE, 7 equal mass bins | Debiased L2 error | ECE at chance level | AUC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | Monte Carlo | 184 | 0.46 | 0.39 | 0.239 [0.185, 0.293] | 0.169 [0.124, 0.256] | 0.152 | 0.163 [0.099, 0.279] | 0.060 | 0.73 |
+| all | frozen recalibrator | 184 | 0.46 | 0.49 | 0.161 [0.133, 0.190] | 0.059 [0.050, 0.134] | 0.066 | 0.000 [0.000, 0.140] | 0.074 | 0.85 |
+| stacked | Monte Carlo | 112 | 0.37 | 0.19 | 0.236 [0.157, 0.316] | 0.196 [0.127, 0.307] | 0.176 | 0.170 [0.089, 0.333] | 0.067 | 0.68 |
+| stacked | frozen recalibrator | 112 | 0.37 | 0.39 | 0.162 [0.135, 0.189] | 0.082 [0.063, 0.170] | 0.112 | 0.075 [0.000, 0.217] | 0.094 | 0.83 |
+| building | planner acceptance probability | 48 | 0.67 | 0.76 | 0.185 [0.119, 0.260] | 0.103 [0.043, 0.256] | 0.112 | 0.000 [0.000, 0.299] | 0.088 | 0.78 |
+
+| Towers | Stones per tower (mean, max) | Height in cm (mean, max) | Steps accepted | Mean of the product of stated probabilities | Share of towers where every placement survived |
+| --- | --- | --- | --- | --- | --- |
+| 24 | 2.00, 3 | 10.5, 22.9 | 0.74 | 0.57 [0.49, 0.64] | 0.54 [0.33, 0.75] |
+
+- On fresh stone sets the frozen recalibrator lowers the ECE from 0.169 to 0.059 and the Brier
+  score from 0.239 to 0.161, and raises the AUC from 0.73 to 0.85. Its ECE is within the range
+  expected from sampling alone for a calibrated predictor with 184 placements (0.074), and the
+  debiased L2 error is 0.000 [0.000, 0.140].
+- On stacked placements the ECE falls from 0.196 to 0.082, close to the chance level of 0.094.
+- Whole towers: the product of the stated probabilities predicts 0.57 of towers survive every
+  placement, and 0.54 did (13 of 24).
+- The fresh towers reach 2.0 stones on average (up to 3 and 22.9 cm), and a candidate passes at
+  74% of levels. They use other stones from towers 0 to 23, so the height is not compared
+  directly with E2plan2. 7 of the 48 building placements collapsed; the 24 stacked ones were
+  stated at 0.60 and 0.54 survived.
+
 ### E3: sources of margin variance (hypothesis H4)
 
 `python scripts/fig_sobol.py --profile study --towers 4 --n 256 --max-stones 3`
@@ -627,7 +667,8 @@ is written by `scripts/export_viewer.py` to `results/viewer/tower_viewer.html`.
 - Towers under perception stop at about one stone with delta = 0.05. With delta = 0.3 (E2grow
   and E4), or with the recalibrated probability at delta = 0.5 (E2plan), they reach 1.6 to 1.7
   stones on average and 3 at most. In E2plan, 23 of 24 towers ended because no candidate for the
-  next stone reached probability 0.5.
+  next stone reached probability 0.5. More candidates (E2cand) add 0.25 stones per tower, and the gain goes
+  once each placement is accepted on a fresh evaluation (E2plan2).
 - The dynamic failure rule (5 mm or 2 degrees) and the static contact band (0.5 mm) interact, and
   the E1 bias depends on both.
 - E1, E2, E5 and E6 use the oracle lowering. In E4 a third of the placements fall back to it.

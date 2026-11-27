@@ -397,6 +397,37 @@ separate prediction on the full Monte Carlo samples.
 - The probability the planner used is well calibrated: ECE 0.067 over all 178 placements and
   0.104 on stacked placements, compared with 0.168 and 0.224 for uncorrected Monte Carlo.
 
+### E2cand and E2view: more candidates compared with more views
+
+`python scripts/run_experiment.py --condition E2cand --profile study --towers 24 --delta 0.5` (and
+`--condition E2view`), then `python scripts/fig_e2grow.py`
+
+Both repeat E2plan with one change each. E2cand scores 48 candidate poses per stone (24 in
+E2plan). E2view captures 8 in hand depth views split between elevations of -30 and -70 degrees,
+at 640 x 480 (4 views at 320 x 240 in E2plan), so more of each stone's underside is seen.
+
+| Experiment | Stones per tower (mean, max) | Towers with 1, 2, 3 stones | Height in cm (mean, max) | Steps accepted | Collapses | Stacked building placements that survived |
+| --- | --- | --- | --- | --- | --- | --- |
+| E2plan | 1.67, 2 | 8, 16, 0 | 9.6, 21.3 | 0.63 | 1 | 10 of 16 |
+| E2cand, 48 candidates | 1.92, 3 | 4, 18, 2 | 10.0, 24.7 | 0.69 | 3 | 11 of 22 |
+| E2view, 8 views at 640 x 480 | 1.58, 2 | 10, 14, 0 | 9.9, 21.3 | 0.61 | 0 | 12 of 14 |
+
+| Placements | Prediction | E2cand: Brier, ECE | E2view: Brier, ECE |
+| --- | --- | --- | --- |
+| all | Monte Carlo | 0.249, 0.179 | 0.208, 0.126 |
+| all | probability used by the planner | 0.186, 0.089 | 0.211, 0.146 |
+| stacked | Monte Carlo | 0.274, 0.222 | 0.255, 0.199 |
+| stacked | probability used by the planner | 0.202, 0.079 | 0.257, 0.212 |
+
+- More candidates moved the height: 46 building placements compared with 40, two 3 stone towers,
+  and the share of accepted steps rose from 0.63 to 0.69. Three towers collapsed (8, 17 and 23).
+- More views did not raise the height. Stacked placements survived more often (12 of 14), and the
+  Monte Carlo probability was less underconfident (mean stated p 0.29 compared with a survival
+  rate of 0.47 on stacked placements, 0.18 compared with 0.34 in E2cand).
+- The learned recalibration was trained on 4 view, 320 x 240 data. On E2view it gives ECE 0.146,
+  so it does not carry over to a different sensor setting without new labels.
+- E2plan2 therefore uses 48 candidates.
+
 ### E3: sources of margin variance (hypothesis H4)
 
 `python scripts/fig_sobol.py --profile study --towers 4 --n 256 --max-stones 3`

@@ -428,6 +428,48 @@ at 640 x 480 (4 views at 320 x 240 in E2plan), so more of each stone's underside
   so it does not carry over to a different sensor setting without new labels.
 - E2plan2 therefore uses 48 candidates.
 
+### E2plan2: sequential screening and acceptance on a fresh evaluation
+
+`python scripts/run_experiment.py --condition E2plan2 --profile study --towers 24 --delta 0.5`,
+then `python scripts/fig_e2grow.py`
+
+E2plan2 keeps the E2plan settings and the 48 candidates of E2cand, and changes how a candidate is
+chosen:
+
+- **Sequential screen.** Each candidate gets batches of 8 samples, up to 64, while its probability
+  is within two standard errors of the threshold.
+- **Acceptance on a fresh evaluation.** The chosen candidate is evaluated again with the full 64
+  samples, independent of the screening samples, and placed only if that probability meets the
+  constraint. Otherwise the next candidates by J are tried, up to 3.
+- **Distinct poses.** Settled poses within 2 mm and 3 degrees of one already scored are skipped.
+- **Flat tops.** J gains 3 times the share of the stone's top surface that is flat, so poses that
+  leave room for the next stone rank higher.
+
+| Experiment | Stones per tower (mean, max) | Height in cm (mean, max) | Steps accepted | Collapses | Change in stones per tower compared with E2plan (paired by tower) |
+| --- | --- | --- | --- | --- | --- |
+| E2plan | 1.67, 2 | 9.6, 21.3 | 0.63 | 1 | |
+| E2cand | 1.92, 3 | 10.0, 24.7 | 0.69 | 3 | +0.25 [+0.04, +0.50] |
+| E2plan2 | 1.62, 2 | 8.9, 18.6 | 0.63 | 1 | -0.04 [-0.21, +0.12] |
+
+| Stacked building placements | n | Screened probability (mean) | Acceptance probability (mean) | Survived |
+| --- | --- | --- | --- | --- |
+| E2plan | 16 | 0.70 | | 0.62 |
+| E2cand | 22 | 0.63 | | 0.50 |
+| E2plan2 | 15 | 0.68 | 0.61 | 0.53 |
+
+- E2plan2 grows to the E2plan height, and 0.29 [0.04, 0.54] stones per tower less than E2cand.
+  The acceptance step removes the gain from more candidates: in E2cand part of the extra height
+  came from candidates whose screened probability was high by chance, and 3 of its towers
+  collapsed.
+- The share of levels where a candidate passes is 0.63, the same as E2plan. Of the 39 building
+  placements, 35 passed on the first try, 1 on the second and 3 on the third.
+- The acceptance probability is close to the outcomes: 0.81 stated compared with 0.77 survived
+  over the 39 building placements (Brier 0.132), and 0.61 compared with 0.53 on the 15 stacked
+  ones. The screened probability overstates stacked survival by 0.14.
+- Height under perception at delta 0.5 is therefore set by the stones and poses on offer. Taller
+  towers need candidates with a higher true survival probability, from better seated poses or
+  stones chosen for the level.
+
 ### E3: sources of margin variance (hypothesis H4)
 
 `python scripts/fig_sobol.py --profile study --towers 4 --n 256 --max-stones 3`

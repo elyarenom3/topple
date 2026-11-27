@@ -1,6 +1,6 @@
 # E2 with a looser chance constraint
 
-Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. E2plan uses delta 0.5 with the learned recalibration in the chance constraint; E2cand adds 48 candidate poses per stone, E2view 8 in hand views at two elevations and 640 x 480 depth images, and E2plan2 the sequential screen with acceptance on a fresh full evaluation. All use the perceived stones and the same stones per tower index. Steps accepted: building placements over steps that ended a tower for want of a candidate meeting the chance constraint plus building placements. Intervals: 95% bootstrap over towers.
+Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. E2plan uses delta 0.5 with the learned recalibration in the chance constraint; E2cand adds 48 candidate poses per stone, E2view 8 in hand views at two elevations and 640 x 480 depth images, and E2plan2 the sequential screen with acceptance on a fresh full evaluation and 48 candidate poses per stone. All use the perceived stones and the same stones per tower index. Steps accepted: building placements over steps that ended a tower for want of a candidate meeting the chance constraint plus building placements. Intervals: 95% bootstrap over towers.
 
 | Experiment | Towers | Stones per tower (mean, max) | Height cm (mean, max) | Collapse rate | Steps accepted | Placements | Stacked placements |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -9,6 +9,7 @@ Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. 
 | E2plan | 24 | 1.67, 2 | 9.6, 21.3 | 0.03 | 0.63 | 178 | 106 |
 | E2cand | 24 | 1.92, 3 | 10.0, 24.7 | 0.07 | 0.69 | 191 | 119 |
 | E2view | 24 | 1.58, 2 | 9.9, 21.3 | 0.00 | 0.61 | 174 | 102 |
+| E2plan2 | 24 | 1.62, 2 | 8.9, 18.6 | 0.03 | 0.63 | 181 | 109 |
 
 ## Placements: all
 
@@ -37,6 +38,11 @@ Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. 
 | E2view | rocking margin, Monte Carlo | 174 | 0.59 | 0.48 | 0.220 [0.164, 0.272] | 0.168 [0.122, 0.254] | 0.79 |
 | E2view | Monte Carlo with learned recalibration | 174 | 0.59 | 0.42 | 0.213 [0.170, 0.257] | 0.163 [0.102, 0.250] | 0.80 |
 | E2view | recalibration used by the planner | 174 | 0.59 | 0.45 | 0.211 [0.169, 0.253] | 0.146 [0.090, 0.231] | 0.78 |
+| E2plan2 | Monte Carlo | 181 | 0.50 | 0.42 | 0.244 [0.197, 0.295] | 0.177 [0.131, 0.260] | 0.71 |
+| E2plan2 | point estimate | 181 | 0.50 | 0.67 | 0.359 [0.286, 0.430] | 0.359 [0.286, 0.430] | 0.64 |
+| E2plan2 | rocking margin, Monte Carlo | 181 | 0.50 | 0.40 | 0.263 [0.212, 0.318] | 0.207 [0.172, 0.291] | 0.71 |
+| E2plan2 | Monte Carlo with learned recalibration | 181 | 0.50 | 0.44 | 0.217 [0.190, 0.245] | 0.120 [0.096, 0.196] | 0.73 |
+| E2plan2 | recalibration used by the planner | 181 | 0.50 | 0.46 | 0.201 [0.176, 0.230] | 0.128 [0.094, 0.199] | 0.76 |
 
 ## Placements: ground
 
@@ -65,6 +71,11 @@ Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. 
 | E2view | rocking margin, Monte Carlo | 72 | 0.75 | 0.82 | 0.141 [0.093, 0.198] | 0.116 [0.066, 0.207] | 0.88 |
 | E2view | Monte Carlo with learned recalibration | 72 | 0.75 | 0.67 | 0.150 [0.109, 0.192] | 0.107 [0.085, 0.209] | 0.83 |
 | E2view | recalibration used by the planner | 72 | 0.75 | 0.68 | 0.145 [0.106, 0.187] | 0.103 [0.076, 0.202] | 0.85 |
+| E2plan2 | Monte Carlo | 72 | 0.65 | 0.74 | 0.215 [0.154, 0.287] | 0.159 [0.105, 0.298] | 0.73 |
+| E2plan2 | point estimate | 72 | 0.65 | 0.97 | 0.319 [0.208, 0.444] | 0.319 [0.208, 0.444] | 0.54 |
+| E2plan2 | rocking margin, Monte Carlo | 72 | 0.65 | 0.76 | 0.221 [0.150, 0.303] | 0.182 [0.110, 0.306] | 0.73 |
+| E2plan2 | Monte Carlo with learned recalibration | 72 | 0.65 | 0.67 | 0.189 [0.144, 0.241] | 0.167 [0.132, 0.272] | 0.78 |
+| E2plan2 | recalibration used by the planner | 72 | 0.65 | 0.68 | 0.189 [0.146, 0.239] | 0.128 [0.097, 0.241] | 0.77 |
 
 ## Placements: stacked
 
@@ -93,3 +104,8 @@ Written by `scripts/fig_e2grow.py`. E2all uses delta 0.05 and E2grow delta 0.3. 
 | E2view | rocking margin, Monte Carlo | 102 | 0.47 | 0.24 | 0.276 [0.182, 0.365] | 0.257 [0.162, 0.394] | 0.72 |
 | E2view | Monte Carlo with learned recalibration | 102 | 0.47 | 0.25 | 0.258 [0.195, 0.321] | 0.220 [0.127, 0.335] | 0.75 |
 | E2view | recalibration used by the planner | 102 | 0.47 | 0.28 | 0.257 [0.198, 0.319] | 0.212 [0.131, 0.321] | 0.69 |
+| E2plan2 | Monte Carlo | 109 | 0.39 | 0.20 | 0.263 [0.197, 0.342] | 0.205 [0.134, 0.326] | 0.65 |
+| E2plan2 | point estimate | 109 | 0.39 | 0.47 | 0.385 [0.306, 0.464] | 0.385 [0.306, 0.464] | 0.61 |
+| E2plan2 | rocking margin, Monte Carlo | 109 | 0.39 | 0.15 | 0.290 [0.214, 0.380] | 0.250 [0.185, 0.378] | 0.64 |
+| E2plan2 | Monte Carlo with learned recalibration | 109 | 0.39 | 0.30 | 0.235 [0.200, 0.274] | 0.132 [0.096, 0.233] | 0.65 |
+| E2plan2 | recalibration used by the planner | 109 | 0.39 | 0.32 | 0.208 [0.179, 0.242] | 0.175 [0.120, 0.260] | 0.72 |

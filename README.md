@@ -46,6 +46,7 @@ with every table and the command that produced it, is in [results/REPORT.md](res
 | Can towers grow under perception and stay calibrated? (E2grow) | With the chance constraint at delta 0.3, towers grow from 1.0 to 1.6 stones on average (up to 3 stones and 21 cm) with no collapses. On stacked placements the ECE is 0.10, and 0.056 after recalibration. |
 | Does planning with the recalibrated probability build taller towers? (E2plan) | At delta 0.5 the towers reach the same height (1.7 stones, 9.6 cm on average), with one collapse. More stacked stones survive (10 of 16 compared with 7 of 15), and the probability the planner used is well calibrated (ECE 0.067). |
 | Which raises the height more: more candidates or more views? (E2cand, E2view) | 48 candidates per stone: 1.9 stones per tower (up to 3 and 24.7 cm) compared with 1.7, and 69% of steps find a candidate. 8 views at 640 x 480: no height gain, though more stacked stones survive (12 of 14). |
+| Does accepting a placement only on a fresh full evaluation raise the height? (E2plan2) | No height gain: 1.6 stones per tower, the E2plan height, and a candidate passes at 63% of levels. The stated probability matches the outcomes (0.81 stated, 0.77 survived over 39 placements). The extra height of E2cand came partly from candidates screened high by chance. |
 | What drives the margin uncertainty? (E3) | Surface shape, for every stone class; the underside matters most for blocky stones. |
 | Is the renderer correct? | It matches Mitsuba 3 on a shared scene (mean FLIP 0.003). |
 
@@ -164,6 +165,7 @@ Figures and renders, one command each:
 | E2grow (delta 0.3) | `python scripts/run_experiment.py --condition E2grow --profile study --towers 24 --delta 0.3`, then `python scripts/fig_e2grow.py` |
 | E2plan (recalibrated planner, delta 0.5) | `python scripts/run_experiment.py --condition E2plan --profile study --towers 24 --delta 0.5`, then `python scripts/fig_e2grow.py` |
 | E2cand and E2view (48 candidates; 8 views at 640 x 480) | `python scripts/run_experiment.py --condition E2cand --profile study --towers 24 --delta 0.5` (and `--condition E2view`), then `python scripts/fig_e2grow.py` |
+| E2plan2 (sequential screen, acceptance on a fresh evaluation, 48 candidates) | `python scripts/run_experiment.py --condition E2plan2 --profile study --towers 24 --delta 0.5`, then `python scripts/fig_e2grow.py` |
 
 `python scripts/make_all.py --profile quick` runs everything at smoke scale.
 
